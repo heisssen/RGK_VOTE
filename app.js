@@ -113,12 +113,19 @@ app.use(express.static(path.join(__dirname, 'public')));
 
 app.get('/data', (req, res) => {
     if (fs.existsSync(CACHE_FILE)) {
-        const cachedData = fs.readFileSync(CACHE_FILE, 'utf-8');
-        res.json(JSON.parse(cachedData));
+        try {
+            const cachedData = fs.readFileSync(CACHE_FILE, 'utf-8');
+            res.json(JSON.parse(cachedData));
+        } catch (err) {
+            console.error('Помилка читання кешу:', err);
+            res.status(500).json({ error: 'Помилка читання кешу' });
+        }
     } else {
+        console.error('Файл кешу не знайдено');
         res.status(500).json({ error: 'Кеш недоступний' });
     }
 });
+
 
 const PORT = 3000;
 app.listen(PORT, () => console.log(`Сервер працює на http://localhost:${PORT}`));
