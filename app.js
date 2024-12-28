@@ -4,35 +4,6 @@ const path = require('path');
 const express = require('express');
 require('dotenv').config(); // Для використання .env файлу
 
-function fetchProtocol() {
-  const options = {
-    hostname: 'rgk.vote.mod.gov.ua',
-    path: '/protocol.txt',
-    method: 'GET',
-    headers: {
-      'User-Agent': 'Node.js Server',
-      'Accept': 'text/plain',
-    },
-  };
-
-https.get(options, (res) => {
-    if (res.statusCode !== 200) {
-      console.error(`Failed to fetch protocol. Status code: ${res.statusCode}`);
-      return;
-    }
-
-    let data = '';
-    res.on('data', (chunk) => { data += chunk; });
-    res.on('end', () => {
-      console.log('Protocol fetched successfully:', data);
-    });
-  }).on('error', (err) => {
-    console.error('Error fetching protocol:', err);
-  });
-}
-
-fetchProtocol();
-
 // --------------------
 // 1. Дані кандидатів
 // --------------------
@@ -307,30 +278,26 @@ function fetchAndUpdateVotes() {
 }
 
 // --------------------
-// Кеш у пам’яті
+// Запуск оновлення та інтервал
 // --------------------
-let cacheData = {
-  timestamp: new Date().toISOString(),
-  candidates: Object.values(CANDIDATES_LIST)
-};
+fetchAndUpdateVotes();
+setInterval(fetchAndUpdateVotes, 600000); // Оновлювати кожні 10 хвилин
 
 // --------------------
 // Створення Express App
 // --------------------
 const app = express();
 
-// Додаємо можливість віддавати статичні файли з папки `public`
+// Віддаємо статичні файли
 app.use(express.static(path.join(__dirname, 'public')));
 
-// API маршрут для отримання списку кандидатів
+// API маршрут для даних
 app.get('/api/stats', (req, res) => {
   res.json(cacheData.candidates);
 });
 
-// --------------------
-// Запуск сервера
-// --------------------
+// Експорт для запуску
 const PORT = process.env.PORT || 3000;
 app.listen(PORT, () => {
-  console.log(`Server is running at http://localhost:${PORT}`);
+  console.log(`Server running on http://localhost:${PORT}`);
 });
