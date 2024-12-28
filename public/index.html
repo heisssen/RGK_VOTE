@@ -1,495 +1,190 @@
 <!DOCTYPE html>
 <html lang="uk">
 <head>
-  <meta charset="UTF-8" />
-  <title>Реал-тайм Парсер (через AllOrigins)</title>
-  <!-- Підключення Tailwind CSS -->
+  <meta charset="utf-8" />
+  <title>Статистика голосів</title>
   <script src="https://cdn.tailwindcss.com"></script>
-  <!-- Підключення Chart.js (за бажання) -->
   <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-  <style>
-    .progress-container {
-      position: relative;
-      overflow: hidden;
-      border-radius: 0.5rem;
-      background-color: #f3f4f6;
-      height: 1.75rem;
-    }
-    .progress-bar {
-      background: linear-gradient(90deg, #3b82f6, #06b6d4);
-      transition: width 1s ease-in-out;
-      height: 100%;
-    }
-    .progress-label {
-      position: absolute;
-      top: 0;
-      left: 0;
-      width: 100%;
-      height: 100%;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      font-size: 0.875rem;
-      font-weight: bold;
-      color: black;
-      z-index: 10;
-    }
-    .passed {
-      background-color: #d1fae5; /* підсвітка для топ-15 */
-    }
-    .tag {
-      display: inline-block;
-      color: white;
-      font-size: 0.75rem;
-      font-weight: 600;
-      padding: 0.25rem 0.5rem;
-      border-radius: 9999px;
-      margin-left: 0.5rem;
-    }
-    .tag.dem-sokyra {
-      background-color: #ef4444; /* Червоний */
-    }
-    .tag.yarova {
-      background-color: #10b981; /* Зелений */
-    }
-    .tag.stalkeryata {
-      background-color: #3b82f6; /* Синій */
-    }
-    .chart-container {
-      position: relative;
-      height: 300px;
-      width: 100%;
-    }
-    .popup {
-      position: fixed;
-      top: 50%;
-      left: 50%;
-      transform: translate(-50%, -50%);
-      z-index: 50;
-      background: white;
-      box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
-      border-radius: 0.5rem;
-      width: 90%;
-      max-width: 500px;
-      padding: 1rem;
-      display: none;
-    }
-    .popup-header {
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-      border-bottom: 1px solid #e5e7eb;
-      padding-bottom: 0.5rem;
-      margin-bottom: 1rem;
-    }
-    .popup-body {
-      max-height: 300px;
-      overflow-y: auto;
-    }
-    .popup-close {
-      cursor: pointer;
-      color: #6b7280;
-      font-size: 1.25rem;
-    }
-    .popup-close:hover {
-      color: #000;
-    }
-    .history-icon {
-      cursor: pointer;
-      color: #3b82f6;
-      font-size: 1.5rem;
-      vertical-align: middle;
-    }
-    a.pdf-link {
-      color: #2563eb;
-      text-decoration: underline;
-    }
-    a.pdf-link:hover {
-      color: #1e40af;
-    }
-  </style>
 </head>
-<body class="bg-gray-50">
-  <div class="container mx-auto py-8 px-4">
-    <h1 class="text-4xl md:text-5xl font-bold text-center text-gray-800 mb-8">
-      Результати голосування
-    </h1>
-    <div class="text-center mb-6">
-      <p id="updateInfo" class="text-base md:text-lg font-medium text-gray-600"></p>
-      <p class="text-sm md:text-base text-gray-500">
-        (Дані завантажуються через AllOrigins з 
-        <a href="https://rgk.vote.mod.gov.ua/protocol.txt" target="_blank" class="underline text-blue-600">
-          rgk.vote.mod.gov.ua/protocol.txt
-        </a>)
-      </p>
-    </div>
-
-    <!-- Інструменти пошуку та сортування -->
-    <div class="mb-4 flex flex-wrap gap-4 items-center">
-      <input
-        type="text"
-        id="searchInput"
-        placeholder="Пошук кандидата..."
-        class="flex-grow px-4 py-2 border border-gray-300 rounded-lg shadow-sm focus:ring-2 focus:ring-blue-400 focus:outline-none"
-      />
-      <select
-        id="tagFilter"
-        class="px-4 py-2 border border-gray-300 rounded-lg shadow-sm focus:ring-2 focus:ring-blue-400 focus:outline-none"
-      >
-        <option value="">Всі групи</option>
-      </select>
-      <button
-        id="sortByVotes"
-        class="px-4 py-2 bg-blue-500 text-white rounded-lg shadow-md hover:bg-blue-600"
-      >
-        Сортувати за рейтингом
-      </button>
-      <button
-        id="sortById"
-        class="px-4 py-2 bg-blue-500 text-white rounded-lg shadow-md hover:bg-blue-600"
-      >
-        Сортувати за ID
-      </button>
-    </div>
-
-    <!-- Таблиця результатів -->
-    <div id="candidateGrid" class="overflow-x-auto">
-      <table class="table-auto w-full bg-white rounded-lg shadow-lg text-sm md:text-base">
-        <thead class="bg-gradient-to-r from-gray-800 to-gray-700 text-white">
-          <tr>
-            <th class="p-4 text-left">ID</th>
-            <th class="p-4 text-left">Ім'я</th>
-            <th class="p-4 text-left">Організація</th>
-            <th class="p-4 text-right">Кількість голосів</th>
-            <th class="p-4 text-right">PDF</th>
-            <th class="p-4 text-right">Історія</th>
-          </tr>
-        </thead>
-        <tbody id="candidateTable" class="divide-y divide-gray-200"></tbody>
-      </table>
-    </div>
-
-    <!-- Попап (історія голосувань) -->
-    <div id="historyPopup" class="popup">
-      <div class="popup-header">
-        <h2 class="text-lg font-semibold text-gray-800">Історія голосувань</h2>
-        <span id="closePopup" class="popup-close">&times;</span>
-      </div>
-      <div class="popup-body">
-        <ul id="historyList" class="list-disc pl-5 text-gray-700"></ul>
-      </div>
-    </div>
+<body class="bg-gray-100 text-gray-800 min-h-screen">
+<div class="container mx-auto py-6">
+  <h1 class="text-5xl font-extrabold text-center text-gray-900 mb-8">Статистика голосів</h1>
+  
+  <!-- Інформація про оновлення -->
+  <div class="text-center text-sm text-gray-600 mb-6">
+    <span>Останнє оновлення:</span> <span id="lastUpdated" class="font-semibold text-gray-800">-</span>
   </div>
 
-  <script>
-    // ---------------------------------------------------------
-    // 1. Налаштування даних (через AllOrigins)
-    // ---------------------------------------------------------
-    const PROTOCOL_URL = "https://api.allorigins.win/raw?url="
-      + encodeURIComponent("https://rgk.vote.mod.gov.ua/protocol.txt");
+  <!-- Фільтри -->
+  <div class="flex flex-wrap gap-4 justify-between items-center mb-6">
+    <input type="text" id="searchInput" placeholder="🔍 Пошук по імені..." class="border rounded-lg px-4 py-2 w-full md:w-auto shadow-sm focus:outline-none focus:ring focus:border-blue-500" />
+    <select id="sortSelect" class="border rounded-lg px-4 py-2 w-full md:w-auto shadow-sm focus:outline-none focus:ring focus:border-blue-500">
+      <option value="votes">За кількістю голосів</option>
+      <option value="id">За ID</option>
+    </select>
+    <button id="refreshBtn" class="bg-blue-600 text-white px-6 py-2 rounded-lg shadow-md hover:bg-blue-500 transition-all w-full md:w-auto">
+      🔄 Оновити
+    </button>
+  </div>
 
-    // Список усіх кандидатів з їх метаданими (ім’я, організація, PDF)
-    const CANDIDATES_LIST = {
-      "1": { name: "Нишпорка Олена Іванівна", ngo: "Антикорупційна сокира", pdf: "public/candidates/Нишпорка.pdf" },
-      "2": { name: "Соловйов Микита Олександрович", ngo: "Антикорупційна сокира", pdf: "public/candidates/Соловйов.pdf" },
-      "3": { name: "Шуба Анастасія Вадимівна", ngo: "Антикорупційна сокира", pdf: "public/candidates/Шуба.pdf" },
-      "4": { name: "Романчук Андрій Богданович", ngo: "Асоціація правників України", pdf: "public/candidates/Романчук.pdf" },
-      "5": { name: "Бріт Ореста Павлівна", ngo: "БОН", pdf: "public/candidates/Бріт.pdf" },
-      "6": { name: "Русаков Сергій Олександрович", ngo: "Бюро протидії корупції", pdf: "public/candidates/Русаков.pdf" },
-      "7": { name: "Гудименко Юрій Володимирович", ngo: "Ветеранська сокира", pdf: "public/candidates/Гудименко.pdf" },
-      "8": { name: "Штанков Микита Володимирович", ngo: "Ветеранська сокира", pdf: "public/candidates/Штанков.pdf" },
-      "9": { name: "Акопян Рудольф Володимирович", ngo: "Всеукраїнське бюро люстрації та протидії корупції / Бюро протидії корупції", pdf: "public/candidates/Акопян.pdf" },
-      "10": { name: "Гришко Вероніка Віталіївна", ngo: "Детектор влади", pdf: "public/candidates/Гришко.pdf" },
-      "11": { name: "Юрченко Анна Ігорівна", ngo: "Детектор влади", pdf: "public/candidates/Юрченко.pdf" },
-      "12": { name: "Мельник Руслан Дмитрович", ngo: "Захист-Є", pdf: "public/candidates/Мельник.pdf" },
-      "13": { name: "Олівінський Олександр Вікторович", ngo: "Київська спілка ветеранів війни з Росією", pdf: "public/candidates/Олівінський.pdf" },
-      "14": { name: "Свинаренко Олексій Олександрович", ngo: "Київська спілка ветеранів війни з Росією", pdf: "public/candidates/Свинаренко.pdf" },
-      "15": { name: "Кутний Роман Антонович", ngo: "Народний антикорупційний нагляд", pdf: "public/candidates/Кутний.pdf" },
-      "16": { name: "Розум Олег Володимирович", ngo: "Народний антикорупційний нагляд", pdf: "public/candidates/Розум.pdf" },
-      "17": { name: "Левченко В’ячеслав Васильович", ngo: "Національний антикорупційний центр України", pdf: "public/candidates/Левченко.pdf" },
-      "18": { name: "Рибалко Тетяна Сергіївна", ngo: "Національний антикорупційний центр України", pdf: "public/candidates/Рибалко.pdf" },
-      "19": { name: "Плоска Ганна Віталіївна", ngo: "Національний центр правозахисту", pdf: "public/candidates/Плоска.pdf" },
-      "20": { name: "Пшеничний Давид Олександрович", ngo: "Національний центр правозахисту", pdf: "public/candidates/Пшеничний.pdf" },
-      "21": { name: "Яциняк Єлизавета Тарасівна", ngo: "Національний центр правозахисту", pdf: "public/candidates/Яциняк.pdf" },
-      "22": { name: "Костецький Максим Юрійович", ngo: "Незалежна антикорупційна комісія", pdf: "public/candidates/Костецький.pdf" },
-      "23": { name: "Ніколаєнко Тетяна Володимирівна", ngo: "Незалежна антикорупційна комісія", pdf: "public/candidates/Ніколаєнко.pdf" },
-      "24": { name: "Трегуб Олена Миколаївна", ngo: "Незалежна антикорупційна комісія", pdf: "public/candidates/Трегуб.pdf" },
-      "25": { name: "Корольов Ігор Сергійович", ngo: "Разом проти корупції", pdf: "public/candidates/Корольов.pdf" },
-      "26": { name: "Рябека Євгенія Олександрівна", ngo: "Разом проти корупції", pdf: "public/candidates/Рябека.pdf" },
-      "27": { name: "Слесаренко Євгеній Ігорович", ngo: "Разом проти корупції", pdf: "public/candidates/Слесаренко.pdf" },
-      "28": { name: "Осінчук Остап Мирославович", ngo: "Спілка офіцерів України", pdf: "public/candidates/Осінчук.pdf" },
-      "29": { name: "Мітєва Катерина Олександрівна", ngo: "Стейтвотч", pdf: "public/candidates/Мітєва.pdf" },
-      "30": { name: "Попович Інна Юріївна", ngo: "Стейтвотч", pdf: "public/candidates/Попович.pdf" },
-      "31": { name: "Біщук Віктор Павлович", ngo: "Українське правниче товариство", pdf: "public/candidates/Біщук.pdf" },
-      "32": { name: "Масюк Віталій Володимирович", ngo: "Українське правниче товариство", pdf: "public/candidates/Масюк.pdf" },
-      "33": { name: "Чернов Олег Валерійович", ngo: "Українське правниче товариство", pdf: "public/candidates/Чернов.pdf" },
-      "34": { name: "Калинчук Анна Сергіївна", ngo: "Фундація ДЕЮРЕ", pdf: "public/candidates/Калинчук.pdf" },
-      "35": { name: "Геращенко Олександр Володимирович", ngo: "Центр протидії рейдерству та корупції", pdf: "public/candidates/Геращенко.pdf" },
-      "36": { name: "Кривошея Геннадій Григорович", ngo: "Центр протидії рейдерству та корупції", pdf: "public/candidates/Кривошея.pdf" },
-      "37": { name: "Ярова Богдана Едуардівна", ngo: "Центр протидії рейдерству та корупції", pdf: "public/candidates/Ярова.pdf" },
-      "38": { name: "Даценко Катерина Андріївна", ngo: "Центр суспільного контролю", pdf: "public/candidates/Даценко.pdf" },
-      "39": { name: "Микитюк Антон Сергійович", ngo: "Центр суспільного контролю", pdf: "public/candidates/Микитюк.pdf" },
-      "40": { name: "Прудковських Віктор В’ячеславович", ngo: "Центр суспільного контролю", pdf: "public/candidates/Прудковських.pdf" }
-    };
-    Object.keys(CANDIDATES_LIST).forEach(id => {
-      CANDIDATES_LIST[id].id = parseInt(id, 10);
-    });
+  <!-- Мапа тегів -->
+  <div id="tagsMap" class="flex flex-wrap gap-2 mb-8"></div>
+  
+  <!-- Таблиця -->
+  <div id="candidatesContainer" class="overflow-x-auto bg-white shadow-md rounded-lg p-6">
+    <table class="w-full border-collapse text-left">
+      <thead>
+        <tr class="bg-gray-200 text-gray-600 uppercase text-sm leading-normal">
+          <th class="border px-4 py-2">ID</th>
+          <th class="border px-4 py-2">Кандидат</th>
+          <th class="border px-4 py-2">ГО</th>
+          <th class="border px-4 py-2">Голоси</th>
+          <th class="border px-4 py-2">Теги</th>
+        </tr>
+      </thead>
+      <tbody id="candidatesTableBody" class="text-gray-700 text-sm"></tbody>
+    </table>
+  </div>
+</div>
 
-    // Дані про групи (для тегів)
-    const tagsMap = {
-      "ДемСокира та партнери": [1, 2, 3, 5, 7, 8, 22, 23, 24, 31, 32, 33, 38, 39, 40],
-      "Коаліція Ярової": [37, 36, 35, 27, 26, 25, 17, 18, 10, 11],
-      "Сталкерята": [14, 19, 13, 21, 20]
-    };
+<script>
+  const tags = {
+    "ДемСокира та партнери": [1, 2, 3, 5, 7, 8, 22, 23, 24, 31, 32, 33, 38, 39, 40],
+    "Коаліція Ярової": [37, 36, 35, 27, 26, 25, 17, 18, 10, 11],
+    "Сталкерята": [14, 19, 13, 21, 20],
+  };
 
-    // ---------------------------------------------------------
-    // Змінні для зберігання динамічних даних
-    // ---------------------------------------------------------
-    let candidatesData = [];
-    let voteHistory = {};
-    let top15Ids = [];
-    let currentSortKey = 'votes';
-    let currentTagFilter = "";
+  const tagColors = {
+    "ДемСокира та партнери": "bg-red-500 text-white",
+    "Коаліція Ярової": "bg-blue-500 text-white",
+    "Сталкерята": "bg-green-500 text-white",
+  };
 
-    // ---------------------------------------------------------
-    // Ініціалізація випадаючого списку тегів
-    // ---------------------------------------------------------
-    function populateTagFilter() {
-      const tagFilter = document.getElementById('tagFilter');
-      const allTags = Object.keys(tagsMap);
+  let allCandidates = [];
+  let topCandidates = []; // Список ТОП-15 кандидатів
+  let selectedTag = null;
 
-      let optionsHtml = `<option value="">Всі групи</option>`;
-      optionsHtml += allTags
-        .map(tag => `<option value="${tag}">${tag}</option>`)
-        .join('');
-      tagFilter.innerHTML = optionsHtml;
-    }
+  // Завантаження статистики
+  async function fetchStats() {
+    try {
+      const res = await fetch('/api/stats');
+      allCandidates = await res.json();
 
-    // ---------------------------------------------------------
-    // Основна функція для завантаження та парсингу протоколу
-    // ---------------------------------------------------------
-    async function fetchAndParseProtocol() {
-      try {
-        const res = await fetch(PROTOCOL_URL);
-        if (!res.ok) {
-          throw new Error(`HTTP error! status: ${res.status}`);
-        }
-        const text = await res.text();
-
-        // Очищаємо попередні дані
-        candidatesData = [];
-
-        // Розбиваємо по рядках
-        const lines = text.trim().split('\n');
-        
-        // Припустимо, формат:
-        // "<рядковий_номер> <ID_кандидата> <голоси>"
-        lines.forEach(line => {
-          const lineParts = line.trim().split(/\s+/);
-          if (lineParts.length >= 3) {
-            const candidateId = lineParts[1];
-            const votes = lineParts[2];
-            if (!isNaN(candidateId) && !isNaN(votes)) {
-              const idNum = parseInt(candidateId, 10);
-              const votesNum = parseInt(votes, 10);
-              
-              const meta = CANDIDATES_LIST[candidateId] || {
-                name: "Невідомий кандидат #" + candidateId,
-                ngo: "",
-                pdf: ""
-              };
-
-              candidatesData.push({
-                id: idNum,
-                name: meta.name,
-                ngo: meta.ngo,
-                pdf: meta.pdf,
-                votes: votesNum
-              });
-            }
+      // Додаємо теги до кандидатів
+      allCandidates.forEach(candidate => {
+        candidate.tags = [];
+        for (const [tagName, ids] of Object.entries(tags)) {
+          if (ids.includes(Number(candidate.id))) {
+            candidate.tags.push(tagName);
           }
-        });
-
-        // Сортуємо по голосах, визначаємо топ-15
-        candidatesData.sort((a, b) => b.votes - a.votes);
-        top15Ids = candidatesData.slice(0, 15).map(c => c.id);
-
-        // Оновимо історію
-        const timestamp = Date.now();
-        updateHistory(timestamp);
-
-        // Малюємо таблицю
-        renderTable();
-
-        // Оновимо час
-        const updateInfo = document.getElementById('updateInfo');
-        updateInfo.textContent = `Оновлено: ${new Date(timestamp).toLocaleString('uk-UA')}`;
-      } catch (err) {
-        console.error("Помилка завантаження protocol.txt", err);
-      }
-    }
-
-    // ---------------------------------------------------------
-    // Оновлення історії (voteHistory)
-    // ---------------------------------------------------------
-    function updateHistory(timestamp) {
-      candidatesData.forEach(candidate => {
-        if (!voteHistory[candidate.id]) {
-          voteHistory[candidate.id] = [];
         }
-        voteHistory[candidate.id].push({
-          timestamp: timestamp,
-          votes: candidate.votes
-        });
-      });
-    }
-
-    // ---------------------------------------------------------
-    // Відображення (рендер) таблиці кандидатів
-    // ---------------------------------------------------------
-    function renderTable() {
-      const table = document.getElementById('candidateTable');
-      const searchInput = document.getElementById('searchInput').value.trim().toLowerCase();
-
-      // Фільтрування
-      let filteredCandidates = candidatesData.filter(candidate => {
-        // 1) Фільтр по тегу
-        if (currentTagFilter) {
-          const candidateTag = getTag(candidate.id);
-          if (candidateTag !== currentTagFilter) return false;
-        }
-        // 2) Пошук
-        if (searchInput) {
-          const matchName = candidate.name.toLowerCase().includes(searchInput);
-          return matchName;
-        }
-        return true;
       });
 
-      // Сортування
-      filteredCandidates.sort((a, b) => {
-        if (currentSortKey === 'votes') {
-          return b.votes - a.votes;
-        } else if (currentSortKey === 'id') {
-          return a.id - b.id;
-        }
-        return 0;
-      });
+      // Визначаємо ТОП-15 кандидатів за кількістю голосів
+      topCandidates = allCandidates
+        .slice()
+        .sort((a, b) => b.votes - a.votes)
+        .slice(0, 15)
+        .map(c => Number(c.id));
 
-      // Знаходимо максимум для прогрес-бару
-      const maxVotes = candidatesData.length
-        ? Math.max(...candidatesData.map(c => c.votes))
-        : 1;
+      renderTagsMap();
+      renderCandidates();
 
-      const rowsHtml = filteredCandidates.map(candidate => {
-        const percent = candidate.votes ? (candidate.votes / maxVotes) * 100 : 0;
-        const candidateTag = getTag(candidate.id);
-        const tagClass =
-          candidateTag === "ДемСокира та партнери"
-            ? "dem-sokyra"
-            : candidateTag === "Коаліція Ярової"
-            ? "yarova"
-            : candidateTag === "Сталкерята"
-            ? "stalkeryata"
-            : "";
-        const isTop15 = top15Ids.includes(candidate.id) ? 'passed' : '';
+      // Оновлюємо час останнього оновлення
+      document.getElementById('lastUpdated').textContent = new Date().toLocaleString();
+    } catch (err) {
+      console.error('Помилка завантаження:', err);
+    }
+  }
 
-        return `
-          <tr class="hover:bg-gray-50 ${isTop15}">
-            <td class="p-4 text-gray-700 font-semibold">${candidate.id}</td>
-            <td class="p-4 text-gray-800 font-medium">
-              ${candidate.name}
-              ${
-                candidateTag
-                  ? `<span class="tag ${tagClass}">${candidateTag}</span>`
-                  : ''
-              }
-            </td>
-            <td class="p-4 text-gray-600">${candidate.ngo}</td>
-            <td class="p-4 text-gray-900 text-right font-bold">
-              <div class="progress-container">
-                <div class="progress-bar" style="width: ${percent}%;"></div>
-                <span class="progress-label">
-                  ${candidate.votes.toLocaleString('uk-UA')}
-                </span>
-              </div>
-            </td>
-            <td class="p-4 text-right">
-              ${
-                candidate.pdf
-                  ? `<a href="${candidate.pdf}" target="_blank" class="pdf-link">PDF</a>`
-                  : `—`
-              }
-            </td>
-            <td class="p-4 text-right">
-              <span class="history-icon" onclick="showHistoryPopup(${candidate.id})">📜</span>
-            </td>
-          </tr>
-        `;
-      }).join('');
+  // Відображення мапи тегів
+  function renderTagsMap() {
+    const tagsSet = new Set();
 
-      table.innerHTML = rowsHtml;
+    // Додаємо всі унікальні теги
+    Object.keys(tags).forEach(tagName => tagsSet.add(tagName));
+
+    const tagsHtml = Array.from(tagsSet).map(tag => `
+      <span 
+        class="px-4 py-2 rounded-full cursor-pointer ${
+          selectedTag === tag ? `${tagColors[tag]} border border-black` : `${tagColors[tag]} opacity-75 hover:opacity-100`
+        }"
+        onclick="selectTag('${tag}')">
+        ${tag}
+      </span>
+    `).join('');
+
+    document.getElementById('tagsMap').innerHTML = tagsHtml || `
+      <span class="text-gray-500">Теги відсутні</span>
+    `;
+  }
+
+  // Обробка вибору тегу
+  function selectTag(tag) {
+    selectedTag = selectedTag === tag ? null : tag; // Дозволяє скидання
+    renderCandidates();
+    renderTagsMap();
+  }
+
+  // Відображення кандидатів
+  function renderCandidates() {
+    const searchQuery = document.getElementById('searchInput').value.toLowerCase();
+    const sortType = document.getElementById('sortSelect').value;
+
+    // Фільтрація
+    let filtered = allCandidates.filter(c => 
+      c.name.toLowerCase().includes(searchQuery) && 
+      (!selectedTag || c.tags.includes(selectedTag))
+    );
+
+    // Сортування
+    if (sortType === 'votes') {
+      filtered.sort((a, b) => b.votes - a.votes);
+    } else if (sortType === 'id') {
+      filtered.sort((a, b) => Number(a.id) - Number(b.id));
     }
 
-    // ---------------------------------------------------------
-    // Відображення попапу з історією голосувань
-    // ---------------------------------------------------------
-    function showHistoryPopup(candidateId) {
-      const candidateHistory = voteHistory[candidateId] || [];
-      const historyPopup = document.getElementById('historyPopup');
-      const historyList = document.getElementById('historyList');
+    const maxVotes = Math.max(...allCandidates.map(c => c.votes)); // Максимум голосів для прогрес-бару
 
-      const sortedHistory = [...candidateHistory].sort((a, b) => b.timestamp - a.timestamp);
+    const rowsHtml = filtered.map(c => {
+      const isTop = topCandidates.includes(Number(c.id)); // Перевіряємо, чи кандидат у ТОП-15
+      const votePercentage = ((c.votes / maxVotes) * 100).toFixed(2); // Відсоток голосів
+      const tagsHtml = c.tags.map(tag => `
+        <span 
+          class="px-2 py-1 rounded-full text-xs cursor-pointer ${tagColors[tag]} hover:opacity-75"
+          onclick="selectTag('${tag}')">
+          ${tag}
+        </span>
+      `).join(' ');
 
-      historyList.innerHTML = sortedHistory
-        .map(entry => {
-          return `<li>${new Date(entry.timestamp).toLocaleString('uk-UA')}: ${entry.votes} голосів</li>`;
-        })
-        .join('');
+      return `
+        <tr class="${isTop ? 'bg-yellow-100 font-semibold' : ''}">
+          <td class="border px-4 py-2">${c.id}</td>
+          <td class="border px-4 py-2">${c.name}</td>
+          <td class="border px-4 py-2">${c.ngo}</td>
+          <td class="border px-4 py-2">
+            ${c.votes}
+            <div class="h-2 bg-gray-200 rounded mt-1">
+              <div class="h-full bg-green-500 rounded" style="width: ${votePercentage}%;"></div>
+            </div>
+          </td>
+          <td class="border px-4 py-2">${tagsHtml}</td>
+        </tr>
+      `;
+    }).join('');
 
-      historyPopup.style.display = 'block';
-    }
+    document.getElementById('candidatesTableBody').innerHTML = rowsHtml;
+  }
 
-    document.getElementById('closePopup').addEventListener('click', () => {
-      document.getElementById('historyPopup').style.display = 'none';
-    });
+  document.addEventListener('DOMContentLoaded', () => {
+    fetchStats();
+    document.getElementById('refreshBtn').addEventListener('click', fetchStats);
+    document.getElementById('searchInput').addEventListener('input', renderCandidates);
+    document.getElementById('sortSelect').addEventListener('change', renderCandidates);
 
-    // ---------------------------------------------------------
-    // Допоміжні функції
-    // ---------------------------------------------------------
-    function getTag(candidateId) {
-      for (const [tagName, idsArr] of Object.entries(tagsMap)) {
-        if (idsArr.includes(candidateId)) {
-          return tagName;
-        }
-      }
-      return null;
-    }
-
-    // ---------------------------------------------------------
-    // Обробники подій
-    // ---------------------------------------------------------
-    document.getElementById('searchInput').addEventListener('input', renderTable);
-    document.getElementById('tagFilter').addEventListener('change', (e) => {
-      currentTagFilter = e.target.value;
-      renderTable();
-    });
-    document.getElementById('sortByVotes').addEventListener('click', () => {
-      currentSortKey = 'votes';
-      renderTable();
-    });
-    document.getElementById('sortById').addEventListener('click', () => {
-      currentSortKey = 'id';
-      renderTable();
-    });
-
-    // ---------------------------------------------------------
-    // Запуск програми
-    // ---------------------------------------------------------
-    populateTagFilter();
-    fetchAndParseProtocol();
-    // Оновлення кожні 10 хвилин (за бажання, можна змінити інтервал)
-    setInterval(fetchAndParseProtocol, 600000);
-  </script>
+    // Автоматичне оновлення кожні 10 хвилин
+    setInterval(fetchStats, 10 * 60 * 1000);
+  });
+</script>
 </body>
 </html>
