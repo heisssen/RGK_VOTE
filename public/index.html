@@ -2,13 +2,14 @@
 <html lang="uk">
 <head>
   <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Статистика голосів</title>
   <script src="https://cdn.tailwindcss.com"></script>
   <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 </head>
 <body class="bg-gray-100 text-gray-800 min-h-screen">
-<div class="container mx-auto py-6">
-  <h1 class="text-5xl font-extrabold text-center text-gray-900 mb-8">Статистика голосів</h1>
+<div class="container mx-auto px-4 py-6">
+  <h1 class="text-3xl md:text-5xl font-extrabold text-center text-gray-900 mb-6">Статистика голосів</h1>
   
   <!-- Інформація про оновлення -->
   <div class="text-center text-sm text-gray-600 mb-6">
@@ -16,22 +17,25 @@
   </div>
 
   <!-- Фільтри -->
-  <div class="flex flex-wrap gap-4 justify-between items-center mb-6">
-    <input type="text" id="searchInput" placeholder="🔍 Пошук по імені..." class="border rounded-lg px-4 py-2 w-full md:w-auto shadow-sm focus:outline-none focus:ring focus:border-blue-500" />
-    <select id="sortSelect" class="border rounded-lg px-4 py-2 w-full md:w-auto shadow-sm focus:outline-none focus:ring focus:border-blue-500">
+  <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
+    <input type="text" id="searchInput" placeholder="🔍 Пошук по імені..." class="border rounded-lg px-4 py-2 w-full shadow-sm focus:outline-none focus:ring focus:border-blue-500" />
+    <select id="sortSelect" class="border rounded-lg px-4 py-2 w-full shadow-sm focus:outline-none focus:ring focus:border-blue-500">
       <option value="votes">За кількістю голосів</option>
       <option value="id">За ID</option>
     </select>
-    <button id="refreshBtn" class="bg-blue-600 text-white px-6 py-2 rounded-lg shadow-md hover:bg-blue-500 transition-all w-full md:w-auto">
+    <button id="refreshBtn" class="bg-blue-600 text-white px-6 py-2 rounded-lg shadow-md hover:bg-blue-500 transition-all w-full">
       🔄 Оновити
     </button>
   </div>
 
   <!-- Мапа тегів -->
-  <div id="tagsMap" class="flex flex-wrap gap-2 mb-8"></div>
+  <div class="bg-white rounded-lg shadow-md p-4 mb-6">
+    <h2 class="text-lg font-semibold mb-3">Фільтр за тегами:</h2>
+    <div id="tagsMap" class="flex flex-wrap gap-2"></div>
+  </div>
   
-  <!-- Таблиця -->
-  <div id="candidatesContainer" class="overflow-x-auto bg-white shadow-md rounded-lg p-6">
+  <!-- Таблиця для десктопу -->
+  <div class="hidden md:block overflow-x-auto bg-white shadow-md rounded-lg">
     <table class="w-full border-collapse text-left">
       <thead>
         <tr class="bg-gray-200 text-gray-600 uppercase text-sm leading-normal">
@@ -45,6 +49,9 @@
       <tbody id="candidatesTableBody" class="text-gray-700 text-sm"></tbody>
     </table>
   </div>
+
+  <!-- Картки для мобільної версії -->
+  <div id="candidatesMobileView" class="md:hidden space-y-4"></div>
 </div>
 
 <script>
@@ -61,16 +68,14 @@
   };
 
   let allCandidates = [];
-  let topCandidates = []; // Список ТОП-15 кандидатів
+  let topCandidates = [];
   let selectedTag = null;
 
-  // Завантаження статистики
   async function fetchStats() {
     try {
       const res = await fetch('/api/stats');
       allCandidates = await res.json();
 
-      // Додаємо теги до кандидатів
       allCandidates.forEach(candidate => {
         candidate.tags = [];
         for (const [tagName, ids] of Object.entries(tags)) {
@@ -80,7 +85,6 @@
         }
       });
 
-      // Визначаємо ТОП-15 кандидатів за кількістю голосів
       topCandidates = allCandidates
         .slice()
         .sort((a, b) => b.votes - a.votes)
@@ -90,18 +94,14 @@
       renderTagsMap();
       renderCandidates();
 
-      // Оновлюємо час останнього оновлення
       document.getElementById('lastUpdated').textContent = new Date().toLocaleString();
     } catch (err) {
       console.error('Помилка завантаження:', err);
     }
   }
 
-  // Відображення мапи тегів
   function renderTagsMap() {
     const tagsSet = new Set();
-
-    // Додаємо всі унікальні теги
     Object.keys(tags).forEach(tagName => tagsSet.add(tagName));
 
     const tagsHtml = Array.from(tagsSet).map(tag => `
@@ -119,43 +119,40 @@
     `;
   }
 
-  // Обробка вибору тегу
   function selectTag(tag) {
-    selectedTag = selectedTag === tag ? null : tag; // Дозволяє скидання
+    selectedTag = selectedTag === tag ? null : tag;
     renderCandidates();
     renderTagsMap();
   }
 
-  // Відображення кандидатів
   function renderCandidates() {
     const searchQuery = document.getElementById('searchInput').value.toLowerCase();
     const sortType = document.getElementById('sortSelect').value;
 
-    // Фільтрація
     let filtered = allCandidates.filter(c => 
       c.name.toLowerCase().includes(searchQuery) && 
       (!selectedTag || c.tags.includes(selectedTag))
     );
 
-    // Сортування
     if (sortType === 'votes') {
       filtered.sort((a, b) => b.votes - a.votes);
     } else if (sortType === 'id') {
       filtered.sort((a, b) => Number(a.id) - Number(b.id));
     }
 
-    const maxVotes = Math.max(...allCandidates.map(c => c.votes)); // Максимум голосів для прогрес-бару
+    const maxVotes = Math.max(...allCandidates.map(c => c.votes));
 
+    // Рендер для десктопної таблиці
     const rowsHtml = filtered.map(c => {
-      const isTop = topCandidates.includes(Number(c.id)); // Перевіряємо, чи кандидат у ТОП-15
-      const votePercentage = ((c.votes / maxVotes) * 100).toFixed(2); // Відсоток голосів
+      const isTop = topCandidates.includes(Number(c.id));
+      const votePercentage = ((c.votes / maxVotes) * 100).toFixed(2);
       const tagsHtml = c.tags.map(tag => `
-        <span 
-          class="px-2 py-1 rounded-full text-xs cursor-pointer ${tagColors[tag]} hover:opacity-75"
+        <div 
+          class="px-2 py-1 rounded-full text-xs cursor-pointer ${tagColors[tag]} hover:opacity-75 mb-1"
           onclick="selectTag('${tag}')">
           ${tag}
-        </span>
-      `).join(' ');
+        </div>
+      `).join('');
 
       return `
         <tr class="${isTop ? 'bg-yellow-100 font-semibold' : ''}">
@@ -168,12 +165,49 @@
               <div class="h-full bg-green-500 rounded" style="width: ${votePercentage}%;"></div>
             </div>
           </td>
-          <td class="border px-4 py-2">${tagsHtml}</td>
+          <td class="border px-4 py-2">
+            <div class="flex flex-col gap-1">
+              ${tagsHtml}
+            </div>
+          </td>
         </tr>
       `;
     }).join('');
 
+    // Рендер для мобільних карток
+    const cardsHtml = filtered.map(c => {
+      const isTop = topCandidates.includes(Number(c.id));
+      const votePercentage = ((c.votes / maxVotes) * 100).toFixed(2);
+      const tagsHtml = c.tags.map(tag => `
+        <div 
+          class="px-2 py-1 rounded-full text-xs cursor-pointer ${tagColors[tag]} hover:opacity-75 mb-1 inline-block"
+          onclick="selectTag('${tag}')">
+          ${tag}
+        </div>
+      `).join(' ');
+
+      return `
+        <div class="bg-white rounded-lg shadow-md p-4 ${isTop ? 'border-l-4 border-yellow-400' : ''}">
+          <div class="flex justify-between items-start mb-2">
+            <div class="font-bold">${c.name}</div>
+            <div class="text-sm text-gray-500">ID: ${c.id}</div>
+          </div>
+          <div class="text-sm text-gray-600 mb-2">${c.ngo}</div>
+          <div class="mb-2">
+            <div class="font-semibold">${c.votes} голосів</div>
+            <div class="h-2 bg-gray-200 rounded mt-1">
+              <div class="h-full bg-green-500 rounded" style="width: ${votePercentage}%;"></div>
+            </div>
+          </div>
+          <div class="flex flex-wrap gap-1">
+            ${tagsHtml}
+          </div>
+        </div>
+      `;
+    }).join('');
+
     document.getElementById('candidatesTableBody').innerHTML = rowsHtml;
+    document.getElementById('candidatesMobileView').innerHTML = cardsHtml;
   }
 
   document.addEventListener('DOMContentLoaded', () => {
@@ -182,7 +216,6 @@
     document.getElementById('searchInput').addEventListener('input', renderCandidates);
     document.getElementById('sortSelect').addEventListener('change', renderCandidates);
 
-    // Автоматичне оновлення кожні 10 хвилин
     setInterval(fetchStats, 10 * 60 * 1000);
   });
 </script>
