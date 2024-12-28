@@ -10,13 +10,13 @@
             "use": "@vercel/static"
         }
     ],
-    "routes":[
+    "routes": [
         {
-            "src": "/",
-            "dest": "public/index.html"
+            "src": "/api/(.*)",     // Всі маршрути /api будуть оброблятися app.js
+            "dest": "app.js"
         },
         {
-            "src": "/(.+)",
+            "src": "/(.*)",         // Усі інші маршрути відправляються до статичних файлів
             "dest": "public/$1"
         }
     ]
