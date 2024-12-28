@@ -307,26 +307,30 @@ function fetchAndUpdateVotes() {
 }
 
 // --------------------
-// Запуск оновлення та інтервал
+// Кеш у пам’яті
 // --------------------
-fetchAndUpdateVotes();
-setInterval(fetchAndUpdateVotes, 600000); // Оновлювати кожні 10 хвилин
+let cacheData = {
+  timestamp: new Date().toISOString(),
+  candidates: Object.values(CANDIDATES_LIST)
+};
 
 // --------------------
 // Створення Express App
 // --------------------
 const app = express();
 
-// Віддаємо статичні файли
+// Додаємо можливість віддавати статичні файли з папки `public`
 app.use(express.static(path.join(__dirname, 'public')));
 
-// API маршрут для даних
+// API маршрут для отримання списку кандидатів
 app.get('/api/stats', (req, res) => {
   res.json(cacheData.candidates);
 });
 
-// Експорт для запуску
+// --------------------
+// Запуск сервера
+// --------------------
 const PORT = process.env.PORT || 3000;
 app.listen(PORT, () => {
-  console.log(`Server running on http://localhost:${PORT}`);
+  console.log(`Server is running at http://localhost:${PORT}`);
 });
