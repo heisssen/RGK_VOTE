@@ -4,7 +4,7 @@ const express = require('express');
 const path = require('path');
 
 // Файл кешу та URL для протоколу
-const CACHE_FILE = 'cache.json';
+const CACHE_FILE = path.join('/tmp', 'cache.json');
 const PROTOCOL_URL = 'https://rgk.vote.mod.gov.ua/protocol.txt';
 
 
