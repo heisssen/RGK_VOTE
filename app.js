@@ -4,6 +4,35 @@ const path = require('path');
 const express = require('express');
 require('dotenv').config(); // Для використання .env файлу
 
+function fetchProtocol() {
+  const options = {
+    hostname: 'rgk.vote.mod.gov.ua',
+    path: '/protocol.txt',
+    method: 'GET',
+    headers: {
+      'User-Agent': 'Node.js Server',
+      'Accept': 'text/plain',
+    },
+  };
+
+https.get(options, (res) => {
+    if (res.statusCode !== 200) {
+      console.error(`Failed to fetch protocol. Status code: ${res.statusCode}`);
+      return;
+    }
+
+    let data = '';
+    res.on('data', (chunk) => { data += chunk; });
+    res.on('end', () => {
+      console.log('Protocol fetched successfully:', data);
+    });
+  }).on('error', (err) => {
+    console.error('Error fetching protocol:', err);
+  });
+}
+
+fetchProtocol();
+
 // --------------------
 // 1. Дані кандидатів
 // --------------------
