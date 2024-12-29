@@ -1,57 +1,139 @@
 <!DOCTYPE html>
 <html lang="uk">
 <head>
-  <meta charset="utf-8" />
+  <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Статистика голосів</title>
   <script src="https://cdn.tailwindcss.com"></script>
   <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <style>
+    .history-icon {
+      cursor: pointer;
+    }
+    .modal {
+      display: none; /* Hidden by default */
+      position: fixed; /* Stay in place */
+      z-index: 1; /* Sit on top */
+      left: 0;
+      top: 0;
+      width: 100%; /* Full width */
+      height: 100%; /* Full height */
+      overflow: auto; /* Enable scroll if needed */
+      background-color: rgb(0,0,0); /* Fallback color */
+      background-color: rgba(0,0,0,0.4); /* Black w/ opacity */
+    }
+    .modal-content {
+      background-color: #fefefe;
+      margin: 15% auto; /* 15% from the top and centered */
+      padding: 20px;
+      border: 1px solid #888;
+      width: 80%; /* Could be more or less, depending on screen size */
+    }
+    .close {
+      color: #aaa;
+      float: right;
+      font-size: 28px;
+      font-weight: bold;
+    }
+    .close:hover,
+    .close:focus {
+      color: black;
+      text-decoration: none;
+      cursor: pointer;
+    }
+    .tag-block {
+      display: block;
+      margin-bottom: 0.5rem;
+      cursor: pointer;
+      white-space: nowrap; /* Prevent line breaks */
+    }
+    .table-container {
+      flex-grow: 1; /* Allow the table container to grow */
+      overflow-y: auto; /* Allow vertical scroll if content overflows */
+    }
+    .flex-wrapper {
+      display: flex;
+      flex-direction: column;
+      height: 100vh; /* Full height of the viewport */
+    }
+    .flex-header, .flex-footer {
+      flex-shrink: 0; /* Do not allow to shrink */
+    }
+    .flex-content {
+      flex: 1 1 auto; /* Allow to grow and shrink */
+      display: flex;
+      flex-direction: column;
+    }
+  </style>
 </head>
-<body class="bg-gray-100 text-gray-800 min-h-screen">
-<div class="container mx-auto px-4 py-6">
-  <h1 class="text-3xl md:text-5xl font-extrabold text-center text-gray-900 mb-6">Статистика голосів</h1>
+<body class="bg-gray-100 text-gray-800">
+<div class="container mx-auto px-4 py-6 flex-wrapper">
+  <div class="flex-header">
+    <h1 class="text-3xl md:text-5xl font-extrabold text-center text-gray-900 mb-6">Статистика голосів</h1>
   
-  <!-- Інформація про оновлення -->
-  <div class="text-center text-sm text-gray-600 mb-6">
-    <span>Останнє оновлення:</span> <span id="lastUpdated" class="font-semibold text-gray-800">-</span>
-  </div>
+    <!-- Інформація про оновлення -->
+    <div class="text-center text-sm text-gray-600 mb-6">
+      <span>Останнє оновлення:</span> <span id="lastUpdated" class="font-semibold text-gray-800">-</span>
+    </div>
 
-  <!-- Фільтри -->
-  <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
-    <input type="text" id="searchInput" placeholder="🔍 Пошук по імені..." class="border rounded-lg px-4 py-2 w-full shadow-sm focus:outline-none focus:ring focus:border-blue-500" />
-    <select id="sortSelect" class="border rounded-lg px-4 py-2 w-full shadow-sm focus:outline-none focus:ring focus:border-blue-500">
-      <option value="votes">За кількістю голосів</option>
-      <option value="id">За ID</option>
-    </select>
-    <button id="refreshBtn" class="bg-blue-600 text-white px-6 py-2 rounded-lg shadow-md hover:bg-blue-500 transition-all w-full">
-      🔄 Оновити
-    </button>
-  </div>
+    <!-- Фільтри -->
+    <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
+      <input type="text" id="searchInput" placeholder="🔍 Пошук по імені..." class="border rounded-lg px-4 py-2 w-full shadow-sm focus:outline-none focus:ring focus:border-blue-500">
+      <select id="sortSelect" class="border rounded-lg px-4 py-2 w-full shadow-sm focus:outline-none focus:ring focus:border-blue-500">
+        <option value="votes">За кількістю голосів</option>
+        <option value="id">За ID</option>
+      </select>
+      <button id="refreshBtn" class="bg-blue-600 text-white px-6 py-2 rounded-lg shadow-md hover:bg-blue-500 transition-all w-full">
+        🔄 Оновити
+      </button>
+    </div>
 
-  <!-- Мапа тегів -->
-  <div class="bg-white rounded-lg shadow-md p-4 mb-6">
-    <h2 class="text-lg font-semibold mb-3">Фільтр за тегами:</h2>
-    <div id="tagsMap" class="flex flex-wrap gap-2"></div>
+    <!-- Мапа тегів -->
+    <div class="bg-white rounded-lg shadow-md p-4 mb-6">
+      <h2 class="text-lg font-semibold mb-3">Фільтр за тегами:</h2>
+      <div id="tagsMap" class="flex flex-wrap gap-2"></div>
+    </div>
   </div>
   
-  <!-- Таблиця для десктопу -->
-  <div class="hidden md:block overflow-x-auto bg-white shadow-md rounded-lg">
-    <table class="w-full border-collapse text-left">
-      <thead>
-        <tr class="bg-gray-200 text-gray-600 uppercase text-sm leading-normal">
-          <th class="border px-4 py-2">ID</th>
-          <th class="border px-4 py-2">Кандидат</th>
-          <th class="border px-4 py-2">ГО</th>
-          <th class="border px-4 py-2">Голоси</th>
-          <th class="border px-4 py-2">Теги</th>
-        </tr>
-      </thead>
-      <tbody id="candidatesTableBody" class="text-gray-700 text-sm"></tbody>
-    </table>
+  <div class="flex-content">
+    <!-- Таблиця для десктопу -->
+    <div class="hidden md:block overflow-x-auto bg-white shadow-md rounded-lg table-container">
+      <table class="w-full border-collapse text-left">
+        <thead>
+          <tr class="bg-gray-200 text-gray-600 uppercase text-sm leading-normal">
+            <th class="border px-4 py-2">ID</th>
+            <th class="border px-4 py-2">Кандидат</th>
+            <th class="border px-4 py-2">ГО</th>
+            <th class="border px-4 py-2">Голоси</th>
+            <th class="border px-4 py-2">Загальна кількість голосів</th>
+            <th class="border px-4 py-2">Теги</th>
+            <th class="border px-4 py-2">Історія голосів</th>
+          </tr>
+        </thead>
+        <tbody id="candidatesTableBody" class="text-gray-700 text-sm"></tbody>
+      </table>
+    </div>
+
+    <!-- Картки для мобільної версії -->
+    <div id="candidatesMobileView" class="md:hidden space-y-4"></div>
   </div>
 
-  <!-- Картки для мобільної версії -->
-  <div id="candidatesMobileView" class="md:hidden space-y-4"></div>
+  <div class="flex-footer">
+    <!-- Графік голосів -->
+    <div class="bg-white rounded-lg shadow-md p-4 mt-6">
+      <h2 class="text-lg font-semibold mb-3">Графік голосів:</h2>
+      <canvas id="votesChart"></canvas>
+    </div>
+  </div>
+</div>
+
+<!-- The Modal -->
+<div id="historyModal" class="modal">
+  <div class="modal-content">
+    <span class="close">&times;</span>
+    <h2 class="text-lg font-semibold mb-3">Історія голосів</h2>
+    <div id="historyContent"></div>
+  </div>
 </div>
 
 <script>
@@ -69,12 +151,17 @@
 
   let allCandidates = [];
   let topCandidates = [];
+  let voteTimestamps = [];
   let selectedTag = null;
+  let voteHistoryData = {};
 
   async function fetchStats() {
     try {
       const res = await fetch('/api/stats');
-      allCandidates = await res.json();
+      const data = await res.json();
+      allCandidates = data.candidates;
+      voteTimestamps = data.voteTimestamps;
+      voteHistoryData = {};
 
       allCandidates.forEach(candidate => {
         candidate.tags = [];
@@ -83,6 +170,7 @@
             candidate.tags.push(tagName);
           }
         }
+        voteHistoryData[candidate.id] = candidate.voteHistory;
       });
 
       topCandidates = allCandidates
@@ -93,8 +181,10 @@
 
       renderTagsMap();
       renderCandidates();
+      renderVoteChart();
 
-      document.getElementById('lastUpdated').textContent = new Date().toLocaleString();
+      // Update the last updated timestamp with the cached timestamp
+      document.getElementById('lastUpdated').textContent = new Date(data.timestamp).toLocaleString();
     } catch (err) {
       console.error('Помилка завантаження:', err);
     }
@@ -106,9 +196,7 @@
 
     const tagsHtml = Array.from(tagsSet).map(tag => `
       <span 
-        class="px-4 py-2 rounded-full cursor-pointer ${
-          selectedTag === tag ? `${tagColors[tag]} border border-black` : `${tagColors[tag]} opacity-75 hover:opacity-100`
-        }"
+        class="px-4 py-2 rounded-full tag-block ${tagColors[tag]} hover:opacity-75"
         onclick="selectTag('${tag}')">
         ${tag}
       </span>
@@ -148,7 +236,7 @@
       const votePercentage = ((c.votes / maxVotes) * 100).toFixed(2);
       const tagsHtml = c.tags.map(tag => `
         <div 
-          class="px-2 py-1 rounded-full text-xs cursor-pointer ${tagColors[tag]} hover:opacity-75 mb-1"
+          class="px-2 py-1 rounded-full tag-block ${tagColors[tag]} hover:opacity-75"
           onclick="selectTag('${tag}')">
           ${tag}
         </div>
@@ -165,10 +253,14 @@
               <div class="h-full bg-green-500 rounded" style="width: ${votePercentage}%;"></div>
             </div>
           </td>
+          <td class="border px-4 py-2">${c.votes}</td>
           <td class="border px-4 py-2">
             <div class="flex flex-col gap-1">
               ${tagsHtml}
             </div>
+          </td>
+          <td class="border px-4 py-2 history-icon" onclick="showVoteHistory(${c.id})">
+            📊
           </td>
         </tr>
       `;
@@ -180,7 +272,7 @@
       const votePercentage = ((c.votes / maxVotes) * 100).toFixed(2);
       const tagsHtml = c.tags.map(tag => `
         <div 
-          class="px-2 py-1 rounded-full text-xs cursor-pointer ${tagColors[tag]} hover:opacity-75 mb-1 inline-block"
+          class="px-2 py-1 rounded-full tag-block ${tagColors[tag]} hover:opacity-75 mb-1"
           onclick="selectTag('${tag}')">
           ${tag}
         </div>
@@ -202,12 +294,82 @@
           <div class="flex flex-wrap gap-1">
             ${tagsHtml}
           </div>
+          <div class="mt-2 history-icon" onclick="showVoteHistory(${c.id})">
+            📊
+          </div>
         </div>
       `;
     }).join('');
 
     document.getElementById('candidatesTableBody').innerHTML = rowsHtml;
     document.getElementById('candidatesMobileView').innerHTML = cardsHtml;
+  }
+
+  function showVoteHistory(candidateId) {
+    const candidate = allCandidates.find(c => c.id == candidateId);
+    const historyContent = Object.entries(candidate.voteHistory).map(([timestamp, data]) => `
+      <div>${new Date(timestamp).toLocaleString()}: ${data.votes} голосів (загальна кількість: ${data.cumulativeVotes})</div>
+    `).join('');
+
+    document.getElementById('historyContent').innerHTML = historyContent;
+    document.getElementById('historyModal').style.display = "block";
+  }
+
+  function renderVoteChart() {
+    const ctx = document.getElementById('votesChart').getContext('2d');
+
+    // Підготовка даних для графіка
+    const labels = [];
+    const datasets = [];
+
+    // Формуємо часові мітки та дані для кожного кандидата
+    Object.keys(voteHistoryData).forEach(candidateId => {
+      const candidate = allCandidates.find(c => c.id == candidateId);
+      const voteHistory = voteHistoryData[candidateId];
+      const data = [];
+
+      Object.entries(voteHistory).forEach(([timestamp, { cumulativeVotes }]) => {
+        const date = new Date(timestamp).toLocaleString();
+        if (!labels.includes(date)) {
+          labels.push(date);
+        }
+        data.push(cumulativeVotes);
+      });
+
+      datasets.push({
+        label: candidate.name,
+        data: data,
+        fill: false,
+        borderColor: getRandomColor(),
+        tension: 0.1
+      });
+    });
+
+    // Побудова графіка
+    new Chart(ctx, {
+      type: 'line',
+      data: {
+        labels: labels,
+        datasets: datasets
+      },
+      options: {
+        scales: {
+          y: {
+            beginAtZero: true
+          }
+        }
+      }
+    });
+  }
+
+  // Функція для генерації випадкових кольорів
+  function getRandomColor() {
+    const letters = '0123456789ABCDEF';
+    let color = '#';
+    for (let i = 0; i < 6; i++) {
+      color += letters[Math.floor(Math.random() * 16)];
+    }
+    return color;
   }
 
   document.addEventListener('DOMContentLoaded', () => {
@@ -217,6 +379,24 @@
     document.getElementById('sortSelect').addEventListener('change', renderCandidates);
 
     setInterval(fetchStats, 10 * 60 * 1000);
+
+    // Get the modal
+    const modal = document.getElementById("historyModal");
+
+    // Get the <span> element that closes the modal
+    const span = document.getElementsByClassName("close")[0];
+
+    // When the user clicks on <span> (x), close the modal
+    span.onclick = function() {
+      modal.style.display = "none";
+    }
+
+    // When the user clicks anywhere outside of the modal, close it
+    window.onclick = function(event) {
+      if (event.target == modal) {
+        modal.style.display = "none";
+      }
+    }
   });
 </script>
 </body>

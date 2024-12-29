@@ -4,6 +4,7 @@ const path = require('path');
 const express = require('express');
 require('dotenv').config(); // Для використання .env файлу
 
+
 // --------------------
 // 1. Дані кандидатів
 // --------------------
@@ -210,9 +211,10 @@ const CANDIDATES_LIST = {
   }
 };
 
-// Додати ID до кожного кандидата
+// Додати ID до кожного кандидата і ініціалізувати історію голосів
 Object.keys(CANDIDATES_LIST).forEach(id => {
   CANDIDATES_LIST[id].id = id;
+  CANDIDATES_LIST[id].voteHistory = {};
 });
 
 // --------------------
@@ -220,7 +222,8 @@ Object.keys(CANDIDATES_LIST).forEach(id => {
 // --------------------
 let cacheData = {
   timestamp: null,
-  candidates: []
+  candidates: [],
+  voteTimestamps: []
 };
 
 // --------------------
@@ -239,19 +242,28 @@ function fetchAndUpdateVotes() {
     res.on('data', chunk => { data += chunk; });
     res.on('end', () => {
       const votes = {};
-      const history = {};
+      const voteTimestamps = [];
 
       try {
         const voteLines = data.split('\n').filter(line => line.includes('V='));
         voteLines.forEach(line => {
+          const parts = line.split(/\s+/);
+          const timestamp = new Date(parts[0] + ' ' + parts[1]);
+          // Round down to the nearest 10 minutes
+          timestamp.setMinutes(Math.floor(timestamp.getMinutes() / 10) * 10, 0, 0);
+          const roundedTimestamp = timestamp.toISOString();
           const votePart = line.split('V=')[1];
           if (votePart) {
             const voteIds = votePart.split(',').map(id => id.trim());
             voteIds.forEach(id => {
               if (CANDIDATES_LIST[id]) {
                 votes[id] = (votes[id] || 0) + 1;
-                if (!history[id]) history[id] = [];
-                history[id].push({ timestamp: new Date().toISOString(), total: votes[id] });
+                voteTimestamps.push({ timestamp: roundedTimestamp, id });
+                if (!CANDIDATES_LIST[id].voteHistory[roundedTimestamp]) {
+                  CANDIDATES_LIST[id].voteHistory[roundedTimestamp] = { votes: 0, cumulativeVotes: 0 };
+                }
+                CANDIDATES_LIST[id].voteHistory[roundedTimestamp].votes += 1;
+                CANDIDATES_LIST[id].voteHistory[roundedTimestamp].cumulativeVotes = votes[id];
               }
             });
           }
@@ -262,9 +274,9 @@ function fetchAndUpdateVotes() {
           timestamp: new Date().toISOString(),
           candidates: Object.keys(CANDIDATES_LIST).map(id => ({
             ...CANDIDATES_LIST[id],
-            votes: votes[id] || 0,
-            history: history[id] || []
-          }))
+            votes: votes[id] || 0
+          })),
+          voteTimestamps
         };
 
         console.log('Cache updated successfully.');
@@ -293,7 +305,7 @@ app.use(express.static(path.join(__dirname, 'public')));
 
 // API маршрут для даних
 app.get('/api/stats', (req, res) => {
-  res.json(cacheData.candidates);
+  res.json(cacheData);
 });
 
 // Експорт для запуску
