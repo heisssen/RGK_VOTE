@@ -7,96 +7,97 @@
   <script src="https://cdn.tailwindcss.com"></script>
   <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
   <style>
-    .history-icon {
-      cursor: pointer;
-    }
+    .history-icon { cursor: pointer; }
     .modal {
-      display: none; /* Hidden by default */
-      position: fixed; /* Stay in place */
-      z-index: 1; /* Sit on top */
+      display: none;
+      position: fixed;
+      z-index: 50;
       left: 0;
       top: 0;
-      width: 100%; /* Full width */
-      height: 100%; /* Full height */
-      overflow: auto; /* Enable scroll if needed */
-      background-color: rgb(0,0,0); /* Fallback color */
-      background-color: rgba(0,0,0,0.4); /* Black w/ opacity */
+      width: 100%;
+      height: 100%;
+      background-color: rgba(0,0,0,0.4);
+      overflow: auto;
     }
     .modal-content {
       background-color: #fefefe;
-      margin: 15% auto; /* 15% from the top and centered */
+      margin: 15% auto;
       padding: 20px;
       border: 1px solid #888;
-      width: 80%; /* Could be more or less, depending on screen size */
+      width: 80%;
+      max-width: 800px;
+      border-radius: 8px;
     }
     .close {
       color: #aaa;
       float: right;
       font-size: 28px;
       font-weight: bold;
-    }
-    .close:hover,
-    .close:focus {
-      color: black;
-      text-decoration: none;
       cursor: pointer;
     }
+    .close:hover { color: black; }
     .tag-block {
-      display: block;
+      display: inline-block;
       margin-bottom: 0.5rem;
       cursor: pointer;
-      white-space: nowrap; /* Prevent line breaks */
-    }
-    .table-container {
-      flex-grow: 1; /* Allow the table container to grow */
-      overflow-y: auto; /* Allow vertical scroll if content overflows */
+      white-space: nowrap;
     }
     .flex-wrapper {
       display: flex;
       flex-direction: column;
-      height: 100vh; /* Full height of the viewport */
+      min-height: 100vh;
     }
-    .flex-header, .flex-footer {
-      flex-shrink: 0; /* Do not allow to shrink */
-    }
-    .flex-content {
-      flex: 1 1 auto; /* Allow to grow and shrink */
-      display: flex;
-      flex-direction: column;
+    .table-container {
+      flex-grow: 1;
+      overflow-y: auto;
     }
   </style>
 </head>
 <body class="bg-gray-100 text-gray-800">
 <div class="container mx-auto px-4 py-6 flex-wrapper">
+  <!-- Header Section -->
   <div class="flex-header">
     <h1 class="text-3xl md:text-5xl font-extrabold text-center text-gray-900 mb-6">Статистика голосів</h1>
-  
-    <!-- Інформація про оновлення -->
+    
     <div class="text-center text-sm text-gray-600 mb-6">
-      <span>Останнє оновлення:</span> <span id="lastUpdated" class="font-semibold text-gray-800">-</span>
+      <span>Останнє оновлення:</span> 
+      <span id="lastUpdated" class="font-semibold text-gray-800">-</span>
     </div>
 
-    <!-- Фільтри -->
+    <!-- Controls -->
     <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
-      <input type="text" id="searchInput" placeholder="🔍 Пошук по імені..." class="border rounded-lg px-4 py-2 w-full shadow-sm focus:outline-none focus:ring focus:border-blue-500">
-      <select id="sortSelect" class="border rounded-lg px-4 py-2 w-full shadow-sm focus:outline-none focus:ring focus:border-blue-500">
+      <input 
+        type="text" 
+        id="searchInput" 
+        placeholder="🔍 Пошук по імені..." 
+        class="border rounded-lg px-4 py-2 w-full shadow-sm focus:outline-none focus:ring focus:border-blue-500"
+      >
+      <select 
+        id="sortSelect" 
+        class="border rounded-lg px-4 py-2 w-full shadow-sm focus:outline-none focus:ring focus:border-blue-500"
+      >
         <option value="votes">За кількістю голосів</option>
         <option value="id">За ID</option>
+        <option value="name">За ім'ям</option>
       </select>
-      <button id="refreshBtn" class="bg-blue-600 text-white px-6 py-2 rounded-lg shadow-md hover:bg-blue-500 transition-all w-full">
+      <button 
+        id="refreshBtn" 
+        class="bg-blue-600 text-white px-6 py-2 rounded-lg shadow-md hover:bg-blue-500 transition-all w-full"
+      >
         🔄 Оновити
       </button>
     </div>
 
-    <!-- Мапа тегів -->
+    <!-- Tags Filter -->
     <div class="bg-white rounded-lg shadow-md p-4 mb-6">
-      <h2 class="text-lg font-semibold mb-3">Фільтр за тегами:</h2>
+      <h2 class="text-lg font-semibold mb-3">Фільтр за коаліціями:</h2>
       <div id="tagsMap" class="flex flex-wrap gap-2"></div>
     </div>
   </div>
-  
+
+  <!-- Main Content -->
   <div class="flex-content">
-    <!-- Таблиця для десктопу -->
+    <!-- Desktop Table -->
     <div class="hidden md:block overflow-x-auto bg-white shadow-md rounded-lg table-container">
       <table class="w-full border-collapse text-left">
         <thead>
@@ -105,299 +106,398 @@
             <th class="border px-4 py-2">Кандидат</th>
             <th class="border px-4 py-2">ГО</th>
             <th class="border px-4 py-2">Голоси</th>
-            <th class="border px-4 py-2">Загальна кількість голосів</th>
-            <th class="border px-4 py-2">Теги</th>
-            <th class="border px-4 py-2">Історія голосів</th>
+            <th class="border px-4 py-2">Коаліції</th>
+            <th class="border px-4 py-2">Історія</th>
           </tr>
         </thead>
         <tbody id="candidatesTableBody" class="text-gray-700 text-sm"></tbody>
       </table>
     </div>
 
-    <!-- Картки для мобільної версії -->
+    <!-- Mobile Cards -->
     <div id="candidatesMobileView" class="md:hidden space-y-4"></div>
   </div>
 
-  <div class="flex-footer">
-    <!-- Графік голосів -->
-    <div class="bg-white rounded-lg shadow-md p-4 mt-6">
-      <h2 class="text-lg font-semibold mb-3">Графік голосів:</h2>
-      <canvas id="votesChart"></canvas>
+  <!-- Chart Section -->
+  <div class="flex-footer mt-6">
+    <div class="bg-white rounded-lg shadow-md p-4">
+      <div class="flex items-center justify-between mb-4">
+        <h2 class="text-lg font-semibold">Графік голосів:</h2>
+        <select 
+          id="coalitionSelect" 
+          class="border rounded-lg px-4 py-2 w-64 shadow-sm focus:outline-none focus:ring focus:border-blue-500"
+        >
+          <option value="all">Всі коаліції</option>
+        </select>
+      </div>
+      <div class="relative" style="height: 400px;">
+        <canvas id="votesChart"></canvas>
+      </div>
     </div>
   </div>
 </div>
 
-<!-- The Modal -->
+<!-- Vote History Modal -->
 <div id="historyModal" class="modal">
   <div class="modal-content">
     <span class="close">&times;</span>
-    <h2 class="text-lg font-semibold mb-3">Історія голосів</h2>
-    <div id="historyContent"></div>
+    <h2 class="text-xl font-semibold mb-4">Історія голосів</h2>
+    <div id="historyContent" class="space-y-2"></div>
   </div>
 </div>
 
 <script>
-  const tags = {
+const CONFIG = {
+  tags: {
     "ДемСокира та партнери": [1, 2, 3, 5, 7, 8, 22, 23, 24, 31, 32, 33, 38, 39, 40],
     "Коаліція Ярової": [37, 36, 35, 27, 26, 25, 17, 18, 10, 11],
-    "Сталкерята": [14, 19, 13, 21, 20],
-  };
-
-  const tagColors = {
+    "Сталкерята": [14, 19, 13, 21, 20]
+  },
+  tagColors: {
     "ДемСокира та партнери": "bg-red-500 text-white",
     "Коаліція Ярової": "bg-blue-500 text-white",
-    "Сталкерята": "bg-green-500 text-white",
-  };
+    "Сталкерята": "bg-green-500 text-white"
+  },
+  candidateColors: {
+    1: '#FF6B6B', 2: '#4ECDC4', 3: '#45B7D1', 4: '#96CEB4', 5: '#FFEEAD',
+    6: '#D4A5A5', 7: '#9370DB', 8: '#20B2AA', 9: '#FFB6C1', 10: '#87CEEB',
+    11: '#FFA07A', 12: '#98FB98', 13: '#DDA0DD', 14: '#F0E68C', 15: '#E6E6FA',
+    16: '#FF69B4', 17: '#CD853F', 18: '#BA55D3', 19: '#32CD32', 20: '#FF4500',
+    21: '#4682B4', 22: '#D8BFD8', 23: '#DEB887', 24: '#5F9EA0', 25: '#FFC0CB',
+    26: '#FFD700', 27: '#ADFF2F', 28: '#4B0082', 29: '#F0E68C', 30: '#E6E6FA',
+    31: '#7FFFD4', 32: '#FF69B4', 33: '#8B4513', 34: '#6A5ACD', 35: '#D2691E',
+    36: '#FF4500', 37: '#2E8B57', 38: '#D2B48C', 39: '#DA70D6', 40: '#48D1CC'
+  },
+  updateInterval: 10 * 60 * 1000 // 10 minutes
+};
 
-  let allCandidates = [];
-  let topCandidates = [];
-  let voteTimestamps = [];
-  let selectedTag = null;
-  let voteHistoryData = {};
+let state = {
+  allCandidates: [],
+  topCandidates: [],
+  voteTimestamps: [],
+  selectedTag: null,
+  voteHistoryData: {},
+  chart: null
+};
 
-  async function fetchStats() {
-    try {
-      const res = await fetch('/api/stats');
-      const data = await res.json();
-      allCandidates = data.candidates;
-      voteTimestamps = data.voteTimestamps;
-      voteHistoryData = {};
+// Utility Functions
+const formatDate = date => new Date(date).toLocaleString('uk-UA');
+const getRandomColor = () => '#' + Math.floor(Math.random()*16777215).toString(16);
 
-      allCandidates.forEach(candidate => {
-        candidate.tags = [];
-        for (const [tagName, ids] of Object.entries(tags)) {
-          if (ids.includes(Number(candidate.id))) {
-            candidate.tags.push(tagName);
-          }
-        }
-        voteHistoryData[candidate.id] = candidate.voteHistory;
-      });
+// Data Fetching
+async function fetchStats() {
+  try {
+    const res = await fetch('/api/stats');
+    const data = await res.json();
+    
+    state.allCandidates = data.candidates.map(candidate => ({
+      ...candidate,
+      tags: Object.entries(CONFIG.tags)
+        .filter(([_, ids]) => ids.includes(Number(candidate.id)))
+        .map(([tagName]) => tagName)
+    }));
+    
+    state.voteTimestamps = data.voteTimestamps;
+    state.voteHistoryData = {};
+    state.allCandidates.forEach(candidate => {
+      state.voteHistoryData[candidate.id] = candidate.voteHistory;
+    });
 
-      topCandidates = allCandidates
-        .slice()
-        .sort((a, b) => b.votes - a.votes)
-        .slice(0, 15)
-        .map(c => Number(c.id));
+    state.topCandidates = state.allCandidates
+      .sort((a, b) => b.votes - a.votes)
+      .slice(0, 15)
+      .map(c => Number(c.id));
 
-      renderTagsMap();
-      renderCandidates();
-      renderVoteChart();
+    updateUI();
+    document.getElementById('lastUpdated').textContent = formatDate(data.timestamp);
+  } catch (err) {
+    console.error('Помилка завантаження:', err);
+  }
+}
 
-      // Update the last updated timestamp with the cached timestamp
-      document.getElementById('lastUpdated').textContent = new Date(data.timestamp).toLocaleString();
-    } catch (err) {
-      console.error('Помилка завантаження:', err);
+// UI Updates
+function updateUI() {
+  renderTagsMap();
+  renderCandidates();
+  renderVoteChart();
+}
+
+function renderTagsMap() {
+  const tagsHtml = Object.keys(CONFIG.tags).map(tag => `
+    <span 
+      class="px-4 py-2 rounded-full tag-block ${CONFIG.tagColors[tag]} hover:opacity-75 
+      ${state.selectedTag === tag ? 'ring-2 ring-offset-2 ring-blue-500' : ''}"
+      onclick="selectTag('${tag}')">
+      ${tag}
+    </span>
+  `).join('');
+
+  document.getElementById('tagsMap').innerHTML = tagsHtml;
+}
+
+function renderCandidates() {
+  const searchQuery = document.getElementById('searchInput').value.toLowerCase();
+  const sortType = document.getElementById('sortSelect').value;
+
+  let filtered = state.allCandidates.filter(c => 
+    c.name.toLowerCase().includes(searchQuery) && 
+    (!state.selectedTag || c.tags.includes(state.selectedTag))
+  );
+
+  filtered.sort((a, b) => {
+    switch (sortType) {
+      case 'votes': return b.votes - a.votes;
+      case 'id': return Number(a.id) - Number(b.id);
+      case 'name': return a.name.localeCompare(b.name);
+      default: return 0;
     }
-  }
+  });
 
-  function renderTagsMap() {
-    const tagsSet = new Set();
-    Object.keys(tags).forEach(tagName => tagsSet.add(tagName));
+  renderDesktopTable(filtered);
+  renderMobileCards(filtered);
+}
 
-    const tagsHtml = Array.from(tagsSet).map(tag => `
-      <span 
-        class="px-4 py-2 rounded-full tag-block ${tagColors[tag]} hover:opacity-75"
-        onclick="selectTag('${tag}')">
-        ${tag}
-      </span>
-    `).join('');
-
-    document.getElementById('tagsMap').innerHTML = tagsHtml || `
-      <span class="text-gray-500">Теги відсутні</span>
-    `;
-  }
-
-  function selectTag(tag) {
-    selectedTag = selectedTag === tag ? null : tag;
-    renderCandidates();
-    renderTagsMap();
-  }
-
-  function renderCandidates() {
-    const searchQuery = document.getElementById('searchInput').value.toLowerCase();
-    const sortType = document.getElementById('sortSelect').value;
-
-    let filtered = allCandidates.filter(c => 
-      c.name.toLowerCase().includes(searchQuery) && 
-      (!selectedTag || c.tags.includes(selectedTag))
-    );
-
-    if (sortType === 'votes') {
-      filtered.sort((a, b) => b.votes - a.votes);
-    } else if (sortType === 'id') {
-      filtered.sort((a, b) => Number(a.id) - Number(b.id));
-    }
-
-    const maxVotes = Math.max(...allCandidates.map(c => c.votes));
-
-    // Рендер для десктопної таблиці
-    const rowsHtml = filtered.map(c => {
-      const isTop = topCandidates.includes(Number(c.id));
-      const votePercentage = ((c.votes / maxVotes) * 100).toFixed(2);
-      const tagsHtml = c.tags.map(tag => `
-        <div 
-          class="px-2 py-1 rounded-full tag-block ${tagColors[tag]} hover:opacity-75"
-          onclick="selectTag('${tag}')">
-          ${tag}
-        </div>
-      `).join('');
-
-      return `
-        <tr class="${isTop ? 'bg-yellow-100 font-semibold' : ''}">
-          <td class="border px-4 py-2">${c.id}</td>
-          <td class="border px-4 py-2">${c.name}</td>
-          <td class="border px-4 py-2">${c.ngo}</td>
-          <td class="border px-4 py-2">
-            ${c.votes}
-            <div class="h-2 bg-gray-200 rounded mt-1">
-              <div class="h-full bg-green-500 rounded" style="width: ${votePercentage}%;"></div>
-            </div>
-          </td>
-          <td class="border px-4 py-2">${c.votes}</td>
-          <td class="border px-4 py-2">
-            <div class="flex flex-col gap-1">
-              ${tagsHtml}
-            </div>
-          </td>
-          <td class="border px-4 py-2 history-icon" onclick="showVoteHistory(${c.id})">
-            📊
-          </td>
-        </tr>
-      `;
-    }).join('');
-
-    // Рендер для мобільних карток
-    const cardsHtml = filtered.map(c => {
-      const isTop = topCandidates.includes(Number(c.id));
-      const votePercentage = ((c.votes / maxVotes) * 100).toFixed(2);
-      const tagsHtml = c.tags.map(tag => `
-        <div 
-          class="px-2 py-1 rounded-full tag-block ${tagColors[tag]} hover:opacity-75 mb-1"
-          onclick="selectTag('${tag}')">
-          ${tag}
-        </div>
-      `).join(' ');
-
-      return `
-        <div class="bg-white rounded-lg shadow-md p-4 ${isTop ? 'border-l-4 border-yellow-400' : ''}">
-          <div class="flex justify-between items-start mb-2">
-            <div class="font-bold">${c.name}</div>
-            <div class="text-sm text-gray-500">ID: ${c.id}</div>
-          </div>
-          <div class="text-sm text-gray-600 mb-2">${c.ngo}</div>
-          <div class="mb-2">
-            <div class="font-semibold">${c.votes} голосів</div>
-            <div class="h-2 bg-gray-200 rounded mt-1">
-              <div class="h-full bg-green-500 rounded" style="width: ${votePercentage}%;"></div>
+function renderDesktopTable(candidates) {
+  const maxVotes = Math.max(...state.allCandidates.map(c => c.votes));
+  
+  const rowsHtml = candidates.map(c => {
+    const isTop = state.topCandidates.includes(Number(c.id));
+    const votePercentage = ((c.votes / maxVotes) * 100).toFixed(2);
+    
+    return `
+      <tr class="${isTop ? 'bg-yellow-50' : ''} hover:bg-gray-50">
+        <td class="border px-4 py-2">${c.id}</td>
+        <td class="border px-4 py-2 font-medium">${c.name}</td>
+        <td class="border px-4 py-2">${c.ngo || '-'}</td>
+        <td class="border px-4 py-2">
+          <div class="flex items-center gap-2">
+            <span>${c.votes}</span>
+            <div class="flex-1 h-2 bg-gray-200 rounded">
+              <div class="h-full bg-blue-500 rounded" style="width: ${votePercentage}%"></div>
             </div>
           </div>
+        </td>
+        <td class="border px-4 py-2">
           <div class="flex flex-wrap gap-1">
-            ${tagsHtml}
+            ${c.tags.map(tag => `
+              <span class="px-2 py-1 rounded-full text-xs ${CONFIG.tagColors[tag]}">${tag}</span>
+            `).join('')}
           </div>
-          <div class="mt-2 history-icon" onclick="showVoteHistory(${c.id})">
-            📊
+        </td>
+        <td class="border px-4 py-2">
+          <button 
+            onclick="showVoteHistory(${c.id})"
+            class="p-1 hover:bg-gray-100 rounded"
+          >📊</button>
+        </td>
+      </tr>
+    `;
+  }).join('');
+
+  document.getElementById('candidatesTableBody').innerHTML = rowsHtml;
+}
+
+function renderMobileCards(candidates) {
+  const maxVotes = Math.max(...state.allCandidates.map(c => c.votes));
+  
+  const cardsHtml = candidates.map(c => {
+    const isTop = state.topCandidates.includes(Number(c.id));
+    const votePercentage = ((c.votes / maxVotes) * 100).toFixed(2);
+    
+    return `
+      <div class="bg-white rounded-lg shadow-md p-4 ${isTop ? 'border-l-4 border-yellow-400' : ''}">
+        <div class="flex justify-between items-start mb-2">
+          <div class="font-bold">${c.name}</div>
+          <div class="text-sm text-gray-500">ID: ${c.id}</div>
+        </div>
+        <div class="text-sm text-gray-600 mb-2">${c.ngo || '-'}</div>
+        <div class="mb-3">
+          <div class="font-semibold mb-1">${c.votes} голосів</div>
+          <div class="h-2 bg-gray-200 rounded">
+            <div class="h-full bg-blue-500 rounded" style="width: ${votePercentage}%"></div>
           </div>
         </div>
-      `;
-    }).join('');
+       <div class="flex flex-wrap gap-1 mb-2">
+          ${c.tags.map(tag => `
+            <span class="px-2 py-1 rounded-full text-xs ${CONFIG.tagColors[tag]}">${tag}</span>
+          `).join('')}
+        </div>
+        <button 
+          onclick="showVoteHistory(${c.id})"
+          class="w-full mt-2 py-2 bg-gray-50 hover:bg-gray-100 rounded-lg text-center text-gray-600"
+        >
+          📊 Показати історію
+        </button>
+      </div>
+    `;
+  }).join('');
 
-    document.getElementById('candidatesTableBody').innerHTML = rowsHtml;
-    document.getElementById('candidatesMobileView').innerHTML = cardsHtml;
-  }
+  document.getElementById('candidatesMobileView').innerHTML = cardsHtml;
+}
 
-  function showVoteHistory(candidateId) {
-    const candidate = allCandidates.find(c => c.id == candidateId);
-    const historyContent = Object.entries(candidate.voteHistory).map(([timestamp, data]) => `
-      <div>${new Date(timestamp).toLocaleString()}: ${data.votes} голосів (загальна кількість: ${data.cumulativeVotes})</div>
+function showVoteHistory(candidateId) {
+  const candidate = state.allCandidates.find(c => c.id == candidateId);
+  const history = state.voteHistoryData[candidateId];
+  
+  const historyContent = Object.entries(history)
+    .sort(([a], [b]) => new Date(b) - new Date(a))
+    .map(([timestamp, data]) => `
+      <div class="py-2 border-b last:border-0">
+        <div class="font-medium">${formatDate(timestamp)}</div>
+        <div class="text-sm text-gray-600">
+          Голосів: ${data.votes} 
+          <span class="mx-2">•</span>
+          Всього: ${data.cumulativeVotes}
+        </div>
+      </div>
     `).join('');
 
-    document.getElementById('historyContent').innerHTML = historyContent;
-    document.getElementById('historyModal').style.display = "block";
+  document.getElementById('historyContent').innerHTML = `
+    <div class="mb-4">
+      <h3 class="font-bold text-lg">${candidate.name}</h3>
+      <p class="text-gray-600">ID: ${candidate.id}</p>
+    </div>
+    <div class="divide-y">${historyContent}</div>
+  `;
+  
+  document.getElementById('historyModal').style.display = "block";
+}
+
+function renderVoteChart() {
+  const ctx = document.getElementById('votesChart').getContext('2d');
+  const selectedCoalition = document.getElementById('coalitionSelect').value;
+
+  // Destroy existing chart if it exists
+  if (state.chart) {
+    state.chart.destroy();
   }
 
-  function renderVoteChart() {
-    const ctx = document.getElementById('votesChart').getContext('2d');
+  // Prepare data for the chart
+  const chartData = prepareChartData(selectedCoalition);
 
-    // Підготовка даних для графіка
-    const labels = [];
-    const datasets = [];
-
-    // Формуємо часові мітки та дані для кожного кандидата
-    Object.keys(voteHistoryData).forEach(candidateId => {
-      const candidate = allCandidates.find(c => c.id == candidateId);
-      const voteHistory = voteHistoryData[candidateId];
-      const data = [];
-
-      Object.entries(voteHistory).forEach(([timestamp, { cumulativeVotes }]) => {
-        const date = new Date(timestamp).toLocaleString();
-        if (!labels.includes(date)) {
-          labels.push(date);
-        }
-        data.push(cumulativeVotes);
-      });
-
-      datasets.push({
-        label: candidate.name,
-        data: data,
-        fill: false,
-        borderColor: getRandomColor(),
-        tension: 0.1
-      });
-    });
-
-    // Побудова графіка
-    new Chart(ctx, {
-      type: 'line',
-      data: {
-        labels: labels,
-        datasets: datasets
+  // Create new chart
+  state.chart = new Chart(ctx, {
+    type: 'line',
+    data: chartData,
+    options: {
+      responsive: true,
+      maintainAspectRatio: false,
+      interaction: {
+        intersect: false,
+        mode: 'index'
       },
-      options: {
-        scales: {
-          y: {
-            beginAtZero: true
+      plugins: {
+        legend: {
+          position: 'right',
+          labels: {
+            boxWidth: 12,
+            usePointStyle: true
+          }
+        },
+        tooltip: {
+          callbacks: {
+            label: function(context) {
+              return `${context.dataset.label}: ${context.parsed.y} голосів`;
+            }
           }
         }
-      }
-    });
-  }
-
-  // Функція для генерації випадкових кольорів
-  function getRandomColor() {
-    const letters = '0123456789ABCDEF';
-    let color = '#';
-    for (let i = 0; i < 6; i++) {
-      color += letters[Math.floor(Math.random() * 16)];
-    }
-    return color;
-  }
-
-  document.addEventListener('DOMContentLoaded', () => {
-    fetchStats();
-    document.getElementById('refreshBtn').addEventListener('click', fetchStats);
-    document.getElementById('searchInput').addEventListener('input', renderCandidates);
-    document.getElementById('sortSelect').addEventListener('change', renderCandidates);
-
-    setInterval(fetchStats, 10 * 60 * 1000);
-
-    // Get the modal
-    const modal = document.getElementById("historyModal");
-
-    // Get the <span> element that closes the modal
-    const span = document.getElementsByClassName("close")[0];
-
-    // When the user clicks on <span> (x), close the modal
-    span.onclick = function() {
-      modal.style.display = "none";
-    }
-
-    // When the user clicks anywhere outside of the modal, close it
-    window.onclick = function(event) {
-      if (event.target == modal) {
-        modal.style.display = "none";
+      },
+      scales: {
+        x: {
+          grid: {
+            display: false
+          }
+        },
+        y: {
+          beginAtZero: true,
+          grid: {
+            color: '#f0f0f0'
+          }
+        }
       }
     }
   });
+}
+
+function prepareChartData(selectedCoalition) {
+  const datasets = [];
+  const timestamps = new Set();
+  
+  Object.entries(state.voteHistoryData).forEach(([candidateId, history]) => {
+    const candidate = state.allCandidates.find(c => c.id == candidateId);
+    
+    if (selectedCoalition === 'all' || candidate.tags.includes(selectedCoalition)) {
+      const data = [];
+      const labels = [];
+      
+      Object.entries(history).forEach(([timestamp, { cumulativeVotes }]) => {
+        timestamps.add(timestamp);
+        data.push({
+          x: formatDate(timestamp),
+          y: cumulativeVotes
+        });
+      });
+      
+      datasets.push({
+        label: `${candidate.name} (ID: ${candidate.id})`,
+        data: data,
+        borderColor: CONFIG.candidateColors[candidateId] || getRandomColor(),
+        backgroundColor: 'transparent',
+        tension: 0.1,
+        borderWidth: 2,
+        pointRadius: 3,
+        pointHoverRadius: 5
+      });
+    }
+  });
+
+  const sortedTimestamps = Array.from(timestamps).sort();
+  
+  return {
+    labels: sortedTimestamps.map(formatDate),
+    datasets: datasets
+  };
+}
+
+function selectTag(tag) {
+  state.selectedTag = state.selectedTag === tag ? null : tag;
+  renderCandidates();
+  renderTagsMap();
+}
+
+// Event Listeners
+document.addEventListener('DOMContentLoaded', () => {
+  // Initialize coalition select
+  document.getElementById('coalitionSelect').innerHTML = `
+    <option value="all">Всі коаліції</option>
+    ${Object.keys(CONFIG.tags).map(tag => 
+      `<option value="${tag}">${tag}</option>`
+    ).join('')}
+  `;
+
+  // Add event listeners
+  document.getElementById('refreshBtn').addEventListener('click', fetchStats);
+  document.getElementById('searchInput').addEventListener('input', renderCandidates);
+  document.getElementById('sortSelect').addEventListener('change', renderCandidates);
+  document.getElementById('coalitionSelect').addEventListener('change', renderVoteChart);
+  
+  // Modal close handlers
+  const modal = document.getElementById('historyModal');
+  const closeBtn = document.getElementsByClassName('close')[0];
+  
+  closeBtn.onclick = () => modal.style.display = "none";
+  window.onclick = (event) => {
+    if (event.target == modal) {
+      modal.style.display = "none";
+    }
+  };
+
+  // Initial data fetch
+  fetchStats();
+  
+  // Set up periodic refresh
+  setInterval(fetchStats, CONFIG.updateInterval);
+});
 </script>
 </body>
 </html>
