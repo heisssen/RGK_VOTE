@@ -7,50 +7,107 @@
   <script src="https://cdn.tailwindcss.com"></script>
   <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
   <style>
-    .history-icon { cursor: pointer; }
-    .modal {
-      display: none;
-      position: fixed;
-      z-index: 50;
-      left: 0;
-      top: 0;
-      width: 100%;
-      height: 100%;
-      background-color: rgba(0,0,0,0.4);
-      overflow: auto;
-    }
-    .modal-content {
-      background-color: #fefefe;
-      margin: 15% auto;
-      padding: 20px;
-      border: 1px solid #888;
-      width: 80%;
-      max-width: 800px;
-      border-radius: 8px;
-    }
-    .close {
-      color: #aaa;
-      float: right;
-      font-size: 28px;
-      font-weight: bold;
-      cursor: pointer;
-    }
-    .close:hover { color: black; }
-    .tag-block {
-      display: inline-block;
-      margin-bottom: 0.5rem;
-      cursor: pointer;
-      white-space: nowrap;
-    }
-    .flex-wrapper {
-      display: flex;
-      flex-direction: column;
-      min-height: 100vh;
-    }
-    .table-container {
-      flex-grow: 1;
-      overflow-y: auto;
-    }
+  /* Enhanced styles */
+  .history-icon { 
+    cursor: pointer;
+    transition: all 0.2s ease;
+  }
+  .history-icon:hover {
+    transform: scale(1.1);
+  }
+  .modal {
+    display: none;
+    position: fixed;
+    z-index: 50;
+    left: 0;
+    top: 0;
+    width: 100%;
+    height: 100%;
+    background-color: rgba(0,0,0,0.6);
+    backdrop-filter: blur(3px);
+    overflow: auto;
+  }
+  .modal-content {
+    background-color: #fefefe;
+    margin: 10% auto;
+    padding: 24px;
+    border: none;
+    width: 90%;
+    max-width: 800px;
+    border-radius: 12px;
+    box-shadow: 0 10px 25px rgba(0,0,0,0.2);
+  }
+  .close {
+    color: #666;
+    float: right;
+    font-size: 28px;
+    font-weight: bold;
+    cursor: pointer;
+    transition: color 0.2s ease;
+  }
+  .close:hover { 
+    color: #000;
+  }
+  .tag-block {
+    display: inline-block;
+    margin: 0.25rem;
+    padding: 0.5rem 1rem;
+    border-radius: 20px;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+  }
+  .tag-block:hover {
+    transform: translateY(-1px);
+    box-shadow: 0 4px 6px rgba(0,0,0,0.15);
+  }
+  .flex-wrapper {
+    display: flex;
+    flex-direction: column;
+    min-height: 100vh;
+    gap: 1.5rem;
+  }
+  .vote-bar {
+    height: 8px;
+    border-radius: 4px;
+    background: #e2e8f0;
+    overflow: hidden;
+  }
+  .vote-bar-fill {
+    height: 100%;
+    border-radius: 4px;
+    transition: width 0.3s ease;
+    background: linear-gradient(90deg, #3b82f6, #60a5fa);
+  }
+  .stats-card {
+    background: white;
+    border-radius: 12px;
+    box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+    transition: transform 0.2s ease;
+  }
+  .stats-card:hover {
+    transform: translateY(-2px);
+  }
+  .chart-container {
+    background: white;
+    border-radius: 12px;
+    box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+    padding: 1.5rem;
+    margin-top: 1.5rem;
+  }
+  .clickable-tag {
+    display: inline-block;
+    padding: 0.25rem 0.75rem;
+    border-radius: 15px;
+    font-size: 0.75rem;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    opacity: 0.9;
+  }
+  .clickable-tag:hover {
+    opacity: 1;
+    transform: translateY(-1px);
+  }
   </style>
 </head>
 <body class="bg-gray-100 text-gray-800">
@@ -130,7 +187,7 @@
           <option value="all">Всі коаліції</option>
         </select>
       </div>
-      <div class="relative" style="height: 400px;">
+      <div class="relative" style="height: 600px;">
         <canvas id="votesChart"></canvas>
       </div>
     </div>
@@ -260,39 +317,45 @@ function renderCandidates() {
 function renderDesktopTable(candidates) {
   const maxVotes = Math.max(...state.allCandidates.map(c => c.votes));
   
-  const rowsHtml = candidates.map(c => {
+    const rowsHtml = candidates.map(c => {
     const isTop = state.topCandidates.includes(Number(c.id));
     const votePercentage = ((c.votes / maxVotes) * 100).toFixed(2);
     
     return `
-      <tr class="${isTop ? 'bg-yellow-50' : ''} hover:bg-gray-50">
-        <td class="border px-4 py-2">${c.id}</td>
-        <td class="border px-4 py-2 font-medium">${c.name}</td>
-        <td class="border px-4 py-2">${c.ngo || '-'}</td>
-        <td class="border px-4 py-2">
-          <div class="flex items-center gap-2">
-            <span>${c.votes}</span>
-            <div class="flex-1 h-2 bg-gray-200 rounded">
-              <div class="h-full bg-blue-500 rounded" style="width: ${votePercentage}%"></div>
+      <tr class="${isTop ? 'bg-blue-50' : ''} hover:bg-gray-50 transition-colors">
+        <td class="border px-4 py-3">${c.id}</td>
+        <td class="border px-4 py-3 font-medium">${c.name}</td>
+        <td class="border px-4 py-3">${c.ngo || '-'}</td>
+        <td class="border px-4 py-3">
+          <div class="flex items-center gap-3">
+            <span class="font-medium">${c.votes}</span>
+            <div class="flex-1">
+              <div class="vote-bar">
+                <div class="vote-bar-fill" style="width: ${votePercentage}%"></div>
+              </div>
             </div>
           </div>
         </td>
-        <td class="border px-4 py-2">
+        <td class="border px-4 py-3">
           <div class="flex flex-wrap gap-1">
             ${c.tags.map(tag => `
-              <span class="px-2 py-1 rounded-full text-xs ${CONFIG.tagColors[tag]}">${tag}</span>
+              <span 
+                onclick="selectTag('${tag}')" 
+                class="clickable-tag ${CONFIG.tagColors[tag]}"
+              >${tag}</span>
             `).join('')}
           </div>
         </td>
-        <td class="border px-4 py-2">
+        <td class="border px-4 py-3">
           <button 
             onclick="showVoteHistory(${c.id})"
-            class="p-1 hover:bg-gray-100 rounded"
+            class="p-2 hover:bg-gray-100 rounded-full transition-colors history-icon"
           >📊</button>
         </td>
       </tr>
     `;
   }).join('');
+
 
   document.getElementById('candidatesTableBody').innerHTML = rowsHtml;
 }
@@ -305,28 +368,31 @@ function renderMobileCards(candidates) {
     const votePercentage = ((c.votes / maxVotes) * 100).toFixed(2);
     
     return `
-      <div class="bg-white rounded-lg shadow-md p-4 ${isTop ? 'border-l-4 border-yellow-400' : ''}">
-        <div class="flex justify-between items-start mb-2">
-          <div class="font-bold">${c.name}</div>
-          <div class="text-sm text-gray-500">ID: ${c.id}</div>
+      <div class="stats-card p-4 ${isTop ? 'border-l-4 border-blue-400' : ''}">
+        <div class="flex justify-between items-start mb-3">
+          <div class="font-bold text-lg">${c.name}</div>
+          <div class="text-sm text-gray-500 bg-gray-100 px-2 py-1 rounded">ID: ${c.id}</div>
         </div>
-        <div class="text-sm text-gray-600 mb-2">${c.ngo || '-'}</div>
-        <div class="mb-3">
-          <div class="font-semibold mb-1">${c.votes} голосів</div>
-          <div class="h-2 bg-gray-200 rounded">
-            <div class="h-full bg-blue-500 rounded" style="width: ${votePercentage}%"></div>
+        <div class="text-sm text-gray-600 mb-3">${c.ngo || '-'}</div>
+        <div class="mb-4">
+          <div class="font-semibold mb-2">${c.votes.toLocaleString('uk-UA')} голосів</div>
+          <div class="vote-bar">
+            <div class="vote-bar-fill" style="width: ${votePercentage}%"></div>
           </div>
         </div>
-       <div class="flex flex-wrap gap-1 mb-2">
+        <div class="flex flex-wrap gap-1 mb-3">
           ${c.tags.map(tag => `
-            <span class="px-2 py-1 rounded-full text-xs ${CONFIG.tagColors[tag]}">${tag}</span>
+            <span 
+              onclick="selectTag('${tag}')" 
+              class="clickable-tag ${CONFIG.tagColors[tag]}"
+            >${tag}</span>
           `).join('')}
         </div>
         <button 
           onclick="showVoteHistory(${c.id})"
-          class="w-full mt-2 py-2 bg-gray-50 hover:bg-gray-100 rounded-lg text-center text-gray-600"
+          class="w-full py-2 bg-gray-50 hover:bg-gray-100 rounded-lg text-center text-gray-600 transition-colors"
         >
-          📊 Показати історію
+          📊 Історія голосів
         </button>
       </div>
     `;
@@ -367,15 +433,12 @@ function renderVoteChart() {
   const ctx = document.getElementById('votesChart').getContext('2d');
   const selectedCoalition = document.getElementById('coalitionSelect').value;
 
-  // Destroy existing chart if it exists
   if (state.chart) {
     state.chart.destroy();
   }
 
-  // Prepare data for the chart
   const chartData = prepareChartData(selectedCoalition);
 
-  // Create new chart
   state.chart = new Chart(ctx, {
     type: 'line',
     data: chartData,
@@ -388,17 +451,40 @@ function renderVoteChart() {
       },
       plugins: {
         legend: {
-          position: 'right',
+          position: 'bottom',
+          align: 'start',
           labels: {
             boxWidth: 12,
-            usePointStyle: true
-          }
+            usePointStyle: true,
+            padding: 10,
+            font: {
+              size: 11,
+              family: "'Inter', system-ui, sans-serif"
+            },
+            textAlign: 'left',
+            itemWidth: 150,
+            itemHeight: 16
+          },
+          maxHeight: 150,
+          overflow: 'auto'
         },
         tooltip: {
           callbacks: {
             label: function(context) {
-              return `${context.dataset.label}: ${context.parsed.y} голосів`;
+              return `${context.dataset.label}: ${context.parsed.y.toLocaleString('uk-UA')} голосів`;
             }
+          },
+          backgroundColor: 'rgba(255, 255, 255, 0.95)',
+          titleColor: '#1e293b',
+          bodyColor: '#334155',
+          borderColor: '#e2e8f0',
+          borderWidth: 1,
+          padding: 12,
+          displayColors: true,
+          boxWidth: 8,
+          cornerRadius: 8,
+          titleFont: {
+            weight: '600'
           }
         }
       },
@@ -406,13 +492,39 @@ function renderVoteChart() {
         x: {
           grid: {
             display: false
+          },
+          ticks: {
+            maxRotation: 45,
+            minRotation: 45,
+            font: {
+              size: 10,
+              family: "'Inter', system-ui, sans-serif"
+            },
+            color: '#64748b'
           }
         },
         y: {
           beginAtZero: true,
           grid: {
-            color: '#f0f0f0'
+            color: '#f1f5f9'
+          },
+          ticks: {
+            font: {
+              family: "'Inter', system-ui, sans-serif"
+            },
+            color: '#64748b',
+            callback: function(value) {
+              return value.toLocaleString('uk-UA');
+            }
           }
+        }
+      },
+      layout: {
+        padding: {
+          left: 10,
+          right: 20,
+          top: 20,
+          bottom: 10
         }
       }
     }
