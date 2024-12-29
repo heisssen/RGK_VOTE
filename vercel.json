@@ -2,22 +2,32 @@
   "version": 2,
   "builds": [
     {
-      "src": "app.js",
-      "use": "@vercel/node"
+      "src": "*.html",
+      "use": "@vercel/static"
     },
     {
-      "src": "index.html",
-      "use": "@vercel/static"
+      "src": "api/**/*.js",
+      "use": "@vercel/node"
     }
   ],
   "routes": [
     {
-      "src": "/data",
-      "dest": "app.js"
+      "src": "/api/stats",
+      "dest": "/api/stats.js"
+    },
+    {
+      "src": "/api/placeholder/:width/:height",
+      "dest": "/api/placeholder.js"
+    },
+    {
+      "handle": "filesystem"
     },
     {
       "src": "/(.*)",
-      "dest": "public/index.html"
+      "dest": "/"
     }
-  ]
+  ],
+  "github": {
+    "silent": true
+  }
 }
