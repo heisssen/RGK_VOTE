@@ -1,6 +1,3 @@
-process.env.TZ = 'Europe/Kiev';
-
-
 const https = require('https');
 const fs = require('fs');
 const path = require('path');
@@ -8,15 +5,7 @@ const express = require('express');
 require('dotenv').config(); // Для використання .env файлу
 
 
-// --------------------
-// Кеш у пам'яті
-// --------------------
-let cacheData = {
-  timestamp: null,
-  candidates: [],
-  voteTimestamps: []
-};
-// ... rest of your code
+process.env.TZ = 'Europe/Kiev';
 
 // --------------------
 // 1. Дані кандидатів
