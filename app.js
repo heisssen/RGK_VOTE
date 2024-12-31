@@ -225,7 +225,8 @@ Object.keys(CANDIDATES_LIST).forEach(id => {
 let cacheData = {
   timestamp: null,
   candidates: [],
-  voteTimestamps: []
+  voteTimestamps: [],
+  uniqueVoters: new Set() // Для відстеження унікальних голосів
 };
 
 // --------------------
@@ -245,6 +246,7 @@ function fetchAndUpdateVotes() {
     res.on('end', () => {
       const votes = {};
       const voteTimestamps = [];
+      const uniqueVoters = new Set();
 
       try {
         const voteLines = data.split('\n').filter(line => line.includes('V='));
@@ -255,12 +257,20 @@ function fetchAndUpdateVotes() {
           timestamp.setMinutes(Math.floor(timestamp.getMinutes() / 10) * 10, 0, 0);
           const roundedTimestamp = timestamp.toISOString();
           const votePart = line.split('V=')[1];
+          const voterIdMatch = line.match(/N=(\d+)/);
+          const voterId = voterIdMatch ? voterIdMatch[1] : null;
+
+          if (voterId) {
+            uniqueVoters.add(voterId);
+          }
+
           if (votePart) {
             const voteIds = votePart.split(',').map(id => id.trim());
             voteIds.forEach(id => {
               if (CANDIDATES_LIST[id]) {
                 votes[id] = (votes[id] || 0) + 1;
                 voteTimestamps.push({ timestamp: roundedTimestamp, id });
+
                 if (!CANDIDATES_LIST[id].voteHistory[roundedTimestamp]) {
                   CANDIDATES_LIST[id].voteHistory[roundedTimestamp] = { votes: 0, cumulativeVotes: 0 };
                 }
@@ -278,7 +288,8 @@ function fetchAndUpdateVotes() {
             ...CANDIDATES_LIST[id],
             votes: votes[id] || 0
           })),
-          voteTimestamps
+          voteTimestamps,
+          uniqueVoters: uniqueVoters.size // Кількість унікальних голосів
         };
 
         console.log('Cache updated successfully.');
@@ -307,7 +318,12 @@ app.use(express.static(path.join(__dirname, 'public')));
 
 // API маршрут для даних
 app.get('/api/stats', (req, res) => {
-  res.json(cacheData);
+  res.json({
+    timestamp: cacheData.timestamp,
+    candidates: cacheData.candidates,
+    voteTimestamps: cacheData.voteTimestamps,
+    uniqueVoters: cacheData.uniqueVoters
+  });
 });
 
 // Експорт для запуску

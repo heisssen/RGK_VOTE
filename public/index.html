@@ -2,885 +2,1232 @@
 <html lang="uk">
 <head>
   <meta charset="utf-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>Статистика голосів</title>
   <script src="https://cdn.tailwindcss.com"></script>
-  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
   
+  <!-- Highcharts -->
+  <script src="https://code.highcharts.com/highcharts.js"></script>
+  <script src="https://code.highcharts.com/highcharts-more.js"></script>
+  <script src="https://code.highcharts.com/modules/boost.js"></script>
+  <script src="https://code.highcharts.com/modules/accessibility.js"></script>
+  <script src="https://code.highcharts.com/modules/exporting.js"></script>
+  <script src="https://code.highcharts.com/modules/export-data.js"></script>
+  <script src="https://code.highcharts.com/modules/navigator.js"></script>
+  <script src="https://code.highcharts.com/modules/range-selector.js"></script>
+
   <style>
-  /* Enhanced styles */
-  .history-icon { 
-    cursor: pointer;
-    transition: all 0.2s ease;
-  }
-  .history-icon:hover {
-    transform: scale(1.1);
-  }
-  .modal {
-    display: none;
-    position: fixed;
-    z-index: 50;
-    left: 0;
-    top: 0;
-    width: 100%;
-    height: 100%;
-    background-color: rgba(0,0,0,0.6);
-    backdrop-filter: blur(3px);
-    overflow: auto;
-  }
-  .modal-content {
-    background-color: #fefefe;
-    margin: 10% auto;
-    padding: 24px;
-    border: none;
-    width: 90%;
-    max-width: 800px;
-    border-radius: 12px;
-    box-shadow: 0 10px 25px rgba(0,0,0,0.2);
-  }
-  .close {
-    color: #666;
-    float: right;
-    font-size: 28px;
-    font-weight: bold;
-    cursor: pointer;
-    transition: color 0.2s ease;
-  }
-  .close:hover { 
-    color: #000;
-  }
-  .tag-block {
-    display: inline-block;
-    margin: 0.25rem;
-    padding: 0.5rem 1rem;
-    border-radius: 20px;
-    cursor: pointer;
-    transition: all 0.2s ease;
-    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
-  }
-  .tag-block:hover {
-    transform: translateY(-1px);
-    box-shadow: 0 4px 6px rgba(0,0,0,0.15);
-  }
-  .flex-wrapper {
-    display: flex;
-    flex-direction: column;
-    min-height: 100vh;
-    gap: 1.5rem;
-  }
-  .vote-bar {
-    height: 8px;
-    border-radius: 4px;
-    background: #e2e8f0;
-    overflow: hidden;
-  }
-  .vote-bar-fill {
-    height: 100%;
-    border-radius: 4px;
-    transition: width 0.3s ease;
-    background: linear-gradient(90deg, #3b82f6, #60a5fa);
-  }
-  .stats-card {
-    background: white;
-    border-radius: 12px;
-    box-shadow: 0 4px 6px rgba(0,0,0,0.1);
-    transition: transform 0.2s ease;
-  }
-  .stats-card:hover {
-    transform: translateY(-2px);
-  }
-  .chart-container {
-    background: white;
-    border-radius: 12px;
-    box-shadow: 0 4px 6px rgba(0,0,0,0.1);
-    padding: 1.5rem;
-    margin-top: 1.5rem;
-  }
-  .clickable-tag {
-    display: inline-block;
-    padding: 0.25rem 0.75rem;
-    border-radius: 15px;
-    font-size: 0.75rem;
-    cursor: pointer;
-    transition: all 0.2s ease;
-    opacity: 0.9;
-  }
-  .clickable-tag:hover {
-    opacity: 1;
-    transform: translateY(-1px);
-	
-	 .loading-spinner {
-    width: 50px;
-    height: 50px;
-    border: 5px solid #f3f3f3;
-    border-top: 5px solid #3b82f6;
-    border-radius: 50%;
-    animation: spin 1s linear infinite;
-    margin: 20px auto;
-  }
+    /* Додаткові стилі для покращення інтерфейсу */
+    .history-icon { 
+      cursor: pointer;
+      transition: transform 0.2s ease;
+      font-size: 1.5rem; /* Збільшено розмір емодзі */
+    }
+    .history-icon:hover {
+      transform: scale(1.2);
+    }
+    .candidate-stats-icon { 
+      cursor: pointer;
+      transition: transform 0.2s ease;
+      font-size: 1.5rem; /* Розмір емодзі для нової іконки */
+    }
+    .candidate-stats-icon:hover {
+      transform: scale(1.2);
+    }
+    .modal {
+      display: none;
+      position: fixed;
+      z-index: 50;
+      left: 0;
+      top: 0;
+      width: 100%;
+      height: 100%;
+      background-color: rgba(0,0,0,0.6);
+      backdrop-filter: blur(3px);
+      overflow: auto;
+    }
+    .modal-content {
+      background-color: #fefefe;
+      margin: 5% auto;
+      padding: 24px;
+      border: none;
+      width: 90%;
+      max-width: 800px;
+      border-radius: 12px;
+      box-shadow: 0 10px 25px rgba(0,0,0,0.2);
+      animation: fadeIn 0.3s ease;
+    }
+    @keyframes fadeIn {
+      from { opacity: 0; transform: translateY(-10px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+    .close {
+      color: #666;
+      float: right;
+      font-size: 28px;
+      font-weight: bold;
+      cursor: pointer;
+      transition: color 0.2s ease;
+    }
+    .close:hover { 
+      color: #000;
+    }
+    .tag-block {
+      display: inline-block;
+      margin: 0.25rem;
+      padding: 0.5rem 1rem;
+      border-radius: 20px;
+      cursor: pointer;
+      transition: all 0.2s ease;
+      box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+    }
+    .tag-block:hover {
+      transform: translateY(-1px);
+      box-shadow: 0 4px 6px rgba(0,0,0,0.15);
+    }
+    .flex-wrapper {
+      display: flex;
+      flex-direction: column;
+      min-height: 100vh;
+      gap: 1.5rem;
+    }
+    .vote-bar {
+      height: 8px;
+      border-radius: 4px;
+      background: #e2e8f0;
+      overflow: hidden;
+    }
+    .vote-bar-fill {
+      height: 100%;
+      border-radius: 4px;
+      transition: width 0.3s ease;
+      background: linear-gradient(90deg, #3b82f6, #60a5fa);
+    }
+    .stats-card {
+      background: white;
+      border-radius: 12px;
+      box-shadow: 0 4px 15px rgba(0,0,0,0.05);
+      transition: transform 0.3s ease, box-shadow 0.3s ease;
+      padding: 1.5rem;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      text-align: center;
+    }
 
-  @keyframes spin {
-    0% { transform: rotate(0deg); }
-    100% { transform: rotate(360deg); }
-  }
+    .stats-card:hover {
+      transform: translateY(-4px);
+      box-shadow: 0 6px 20px rgba(0,0,0,0.1);
+    }
 
-  /* Smooth transitions for interactive elements */
-  .table-row-hover {
-    transition: background-color 0.2s ease;
-  }
+    /* Покращені стилі для кнопок */
+    .button-primary {
+      background: linear-gradient(135deg, #3b82f6 0%, #60a5fa 100%);
+      transition: all 0.3s ease;
+    }
 
-  .table-row-hover:hover {
-    background-color: rgba(59, 130, 246, 0.05);
-  }
+    .button-primary:hover {
+      transform: translateY(-1px);
+      box-shadow: 0 4px 12px rgba(59, 130, 246, 0.3);
+    }
 
-  /* Enhanced card design */
-  .stats-card {
-    background: white;
-    border-radius: 12px;
-    box-shadow: 0 4px 15px rgba(0,0,0,0.05);
-    transition: all 0.3s ease;
-  }
+    .clickable-tag {
+      display: inline-block;
+      padding: 0.25rem 0.75rem;
+      border-radius: 15px;
+      font-size: 0.75rem;
+      cursor: pointer;
+      transition: all 0.2s ease;
+      opacity: 0.9;
+    }
+    .clickable-tag:hover {
+      opacity: 1;
+      transform: translateY(-1px);
+    }
 
-  .stats-card:hover {
-    transform: translateY(-2px);
-    box-shadow: 0 6px 20px rgba(0,0,0,0.1);
-  }
+    /* Стилі для мультивибору коаліцій */
+    .multiselect-container {
+      max-height: 200px;
+      overflow-y: auto;
+      border: 1px solid #ccc;
+      border-radius: 8px;
+      padding: 8px;
+      background-color: #fff;
+    }
+    .multiselect-container label {
+      display: block;
+      margin-bottom: 4px;
+      cursor: pointer;
+    }
 
-  /* Improved button styles */
-  .button-primary {
-    background: linear-gradient(135deg, #3b82f6 0%, #60a5fa 100%);
-    transition: all 0.3s ease;
-  }
+    /* Стилі для індикатора завантаження */
+    .loading-spinner {
+      width: 50px;
+      height: 50px;
+      border: 5px solid #f3f3f3;
+      border-top: 5px solid #3b82f6;
+      border-radius: 50%;
+      animation: spin 1s linear infinite;
+      margin: 20px auto;
+    }
+    @keyframes spin {
+      0% { transform: rotate(0deg); }
+      100% { transform: rotate(360deg); }
+    }
 
-  .button-primary:hover {
-    transform: translateY(-1px);
-    box-shadow: 0 4px 12px rgba(59, 130, 246, 0.3);
-  }
-  }
+    /* Покращення для таблиці */
+    .table-row-hover {
+      transition: background-color 0.2s ease;
+    }
+    .table-row-hover:hover {
+      background-color: rgba(59, 130, 246, 0.05);
+    }
+
+    /* Стилі для селектів з мультивибором */
+    select[multiple] {
+      height: auto;
+    }
+
+    /* Адаптивні стилі для фільтрів на мобільних пристроях */
+    @media (max-width: 768px) {
+      #filtersSection {
+        display: none;
+      }
+      #filtersSection.active {
+        display: block;
+      }
+    }
+
+    /* Стилізація таблиці */
+    .table-container {
+      overflow-x: auto;
+    }
+    table {
+      width: 100%;
+      border-collapse: collapse;
+    }
+    th, td {
+      padding: 12px 16px;
+      border: 1px solid #e2e8f0;
+    }
+    th {
+      background: linear-gradient(135deg, #3b82f6 0%, #60a5fa 100%);
+      color: white;
+      text-transform: uppercase;
+      font-size: 0.875rem;
+      font-weight: 600;
+    }
+    td {
+      font-size: 0.875rem;
+    }
+
+    /* Стилізація карток зі стислою статистикою */
+    .summary-statistics, .additional-statistics {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+      gap: 1.5rem;
+      margin-bottom: 2rem;
+    }
+    .summary-card {
+      background-color: white;
+      border-radius: 16px;
+      padding: 1.5rem;
+      box-shadow: 0 4px 20px rgba(0,0,0,0.05);
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      text-align: center;
+      transition: transform 0.3s ease, box-shadow 0.3s ease;
+    }
+    .summary-card:hover {
+      transform: translateY(-4px);
+      box-shadow: 0 8px 25px rgba(0,0,0,0.1);
+    }
+    .summary-icon {
+      font-size: 3rem; /* Збільшено розмір емодзі */
+      margin-bottom: 1rem;
+    }
+    .summary-content .count {
+      font-size: 2rem;
+      font-weight: bold;
+      color: #1f2937;
+    }
+    .summary-content .count.secondary {
+      font-size: 1.5rem;
+      color: #4b5563;
+    }
+    .summary-content .label {
+      font-size: 1rem;
+      color: #6b7280;
+      margin-top: 0.5rem;
+    }
   </style>
 </head>
-<body class="bg-gray-100 text-gray-800">
-<div class="container mx-auto px-4 py-6 flex-wrapper">
-  <!-- Header Section -->
-  <div class="flex-header">
-    <h1 class="text-3xl md:text-5xl font-extrabold text-center text-gray-900 mb-6">Статистика голосів</h1>
-    
-    <div class="text-center text-sm text-gray-600 mb-6">
-      <span>Останнє оновлення:</span> 
-      <span id="lastUpdated" class="font-semibold text-gray-800">-</span>
-    </div>
+<body class="bg-gray-100 text-gray-800 transition-colors duration-500">
+  <!-- Видалено фіксований хедер -->
 
-    <!-- Controls -->
-    <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
-      <input 
-        type="text" 
-        id="searchInput" 
-        placeholder="🔍 Пошук по імені..." 
-        class="border rounded-lg px-4 py-2 w-full shadow-sm focus:outline-none focus:ring focus:border-blue-500"
-      >
-      <select 
-        id="sortSelect" 
-        class="border rounded-lg px-4 py-2 w-full shadow-sm focus:outline-none focus:ring focus:border-blue-500"
-      >
-        <option value="votes">За кількістю голосів</option>
-        <option value="id">За ID</option>
-        <option value="name">За ім'ям</option>
-      </select>
-      <button 
-        id="refreshBtn" 
-        class="bg-blue-600 text-white px-6 py-2 rounded-lg shadow-md hover:bg-blue-500 transition-all w-full"
-      >
-        🔄 Оновити
-      </button>
-    </div>
+  <div class="container mx-auto px-4 py-6 flex-wrapper">
+    <!-- Header Section -->
+    <div class="flex-header">
+      <h1 class="text-3xl md:text-5xl font-extrabold text-center text-gray-900 mb-6">Статистика голосів</h1>
+      
+      <div class="text-center text-sm text-gray-600 mb-6">
+        <span>Останнє оновлення:</span> 
+        <span id="lastUpdated" class="font-semibold text-gray-800">-</span>
+      </div>
 
-    <!-- Tags Filter -->
-    <div class="bg-white rounded-lg shadow-md p-4 mb-6">
-      <h2 class="text-lg font-semibold mb-3">Фільтр за коаліціями:</h2>
-      <div id="tagsMap" class="flex flex-wrap gap-2"></div>
-    </div>
-  </div>
+      <!-- Загальні Статистики -->
+      <div class="summary-statistics">
+        <!-- Картка Загальної Кількості Голосів та Унікальних Голосів -->
+        <div class="summary-card">
+          <div class="summary-icon">
+            📊
+          </div>
+          <div class="summary-content">
+            <div class="count" id="cumulativeVotes">0</div>
+            <div class="label">Загальна кількість голосів</div>
+          </div>
+        </div>
+        
+        <!-- Картка Загальної Кількості Кандидатів -->
+        <div class="summary-card">
+          <div class="summary-icon">
+            👥
+          </div>
+          <div class="summary-content">
+            <div class="count" id="totalCandidates">0</div>
+            <div class="label">Загальна кількість кандидатів</div>
+          </div>
+        </div>
+        
+        <!-- Картка Загальної Кількості Коаліцій -->
+        <div class="summary-card">
+          <div class="summary-icon">
+            🤝
+          </div>
+          <div class="summary-content">
+            <div class="count" id="totalCoalitions">0</div>
+            <div class="label">Загальна кількість коаліцій</div>
+          </div>
+        </div>
+        
+        <!-- Картка Середньої Кількості Голосів -->
+        <div class="summary-card">
+          <div class="summary-icon">
+            📈
+          </div>
+          <div class="summary-content">
+            <div class="count" id="averageVotes">0</div>
+            <div class="label">Середня кількість голосів</div>
+          </div>
+        </div>
+        
+        <!-- Картка Найпопулярнішої Коаліції -->
+        <div class="summary-card">
+          <div class="summary-icon">
+            🏆
+          </div>
+          <div class="summary-content">
+            <div class="count" id="topCoalition">-</div>
+            <div class="label">Найпопулярніша коаліція</div>
+          </div>
+        </div>
+      </div>
 
-  <!-- Main Content -->
-  <div class="flex-content">
-    <!-- Desktop Table -->
-    <div class="hidden md:block overflow-x-auto bg-white shadow-md rounded-lg table-container">
-      <table class="w-full border-collapse text-left">
- <!-- Update the table header -->
-		<thead>
-			<tr class="bg-gradient-to-r from-blue-500 to-blue-600 text-white uppercase text-sm leading-normal">
-		<th class="px-6 py-3 text-left">ID</th>
-		<th class="px-6 py-3 text-left">Кандидат</th>
-		<th class="px-6 py-3 text-left">ГО</th>
-		<th class="px-6 py-3 text-left">Голоси</th>
-		<th class="px-6 py-3 text-left">Коаліції</th>
-		<th class="px-6 py-3 text-left">Історія</th>
-  </tr>
-</thead>
-        <tbody id="candidatesTableBody" class="text-gray-700 text-sm"></tbody>
-      </table>
-    </div>
+      <!-- Додаткові Статистики -->
+      <div class="additional-statistics">
+        <!-- Картка Середній Відсоток Голосів на Кандидата -->
+        <div class="summary-card">
+          <div class="summary-icon">
+            📊
+          </div>
+          <div class="summary-content">
+            <div class="count" id="averagePercentageVotes">0%</div>
+            <div class="label">Середній відсоток голосів на кандидата</div>
+          </div>
+        </div>
+        
+        <!-- Картка Унікальні Виборці -->
+        <div class="summary-card">
+          <div class="summary-icon">
+            👤
+          </div>
+          <div class="summary-content">
+            <div class="count" id="uniqueVoters">0</div>
+            <div class="label">Унікальні виборці</div>
+          </div>
+        </div>
 
-    <!-- Mobile Cards -->
-    <div id="candidatesMobileView" class="md:hidden space-y-4"></div>
-  </div>
+        <!-- Картка Розподіл Голосів за Коаліціями -->
+        <div class="summary-card">
+          <div class="summary-icon">
+            📊
+          </div>
+          <div class="summary-content">
+            <div class="count" id="votesByCoalition">0%</div>
+            <div class="label">Розподіл голосів за коаліціями</div>
+          </div>
+        </div>
+      </div>
 
-  <!-- Chart Section -->
-  <div class="flex-footer mt-6">
-    <div class="bg-white rounded-lg shadow-md p-4">
-      <div class="flex items-center justify-between mb-4">
-        <h2 class="text-lg font-semibold">Графік голосів:</h2>
-        <select 
-          id="coalitionSelect" 
-          class="border rounded-lg px-4 py-2 w-64 shadow-sm focus:outline-none focus:ring focus:border-blue-500"
+      <!-- Controls -->
+      <div class="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">
+        <!-- Видалено кнопку завантаження файлів -->
+
+        <input 
+          type="text" 
+          id="searchInput" 
+          placeholder="🔍 Пошук по імені..." 
+          class="border rounded-lg px-4 py-2 shadow-sm focus:outline-none focus:ring focus:border-blue-500"
         >
-          <option value="all">Всі коаліції</option>
+        <select 
+          id="sortSelect" 
+          class="border rounded-lg px-4 py-2 shadow-sm focus:outline-none focus:ring focus:border-blue-500"
+        >
+          <option value="votes">За кількістю голосів</option>
+          <option value="id">За ID</option>
+          <option value="name">За ім'ям</option>
         </select>
-		
-		
+        <button 
+          id="refreshBtn" 
+          class="button-primary text-white px-6 py-2 rounded-lg shadow-md hover:bg-blue-500 transition-all w-full"
+        >
+          🔄 Оновити
+        </button>
+        <button 
+          id="toggleFiltersBtn" 
+          class="bg-gray-600 text-white px-6 py-2 rounded-lg shadow-md hover:bg-gray-500 transition-all w-full md:hidden"
+        >
+          Фільтри
+        </button>
       </div>
-      <div class="relative" style="height: 600px;">
-        <canvas id="votesChart"></canvas>
+
+      <!-- Filters (Visible on desktop, collapsible on mobile) -->
+      <div id="filtersSection" class="hidden md:block">
+        <!-- Tags Filter -->
+        <div class="bg-white rounded-lg shadow-md p-4 mb-6">
+          <h2 class="text-lg font-semibold mb-3">Фільтр за коаліціями:</h2>
+          <div id="tagsMap" class="flex flex-wrap gap-2"></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Main Content -->
+    <div class="flex-content">
+      <!-- Desktop Table -->
+      <div class="hidden md:block overflow-x-auto bg-white shadow-md rounded-lg table-container">
+        <table class="w-full border-collapse text-left">
+          <!-- Table Header -->
+          <thead>
+            <tr>
+              <th class="px-6 py-3">ID</th>
+              <th class="px-6 py-3">Кандидат</th>
+              <th class="px-6 py-3">ГО</th>
+              <th class="px-6 py-3">Голоси</th>
+              <th class="px-6 py-3">Коаліції</th>
+              <th class="px-6 py-3">Історія</th>
+              <th class="px-6 py-3">Статистика</th> <!-- Нова колонка -->
+            </tr>
+          </thead>
+          <tbody id="candidatesTableBody" class="text-gray-700 text-sm"></tbody>
+        </table>
+      </div>
+
+      <!-- Mobile Cards (залишаємо для мобільних пристроїв) -->
+      <div id="candidatesMobileView" class="md:hidden space-y-4"></div>
+    </div>
+
+    <!-- Chart Section -->
+    <div class="flex-footer mt-6">
+      <div class="bg-white rounded-lg shadow-md p-4">
+        <div class="flex flex-col md:flex-row items-center justify-between mb-4 gap-4">
+          <h2 class="text-lg font-semibold">Графік голосів:</h2>
+          <div class="flex flex-col md:flex-row items-center gap-2 w-full md:w-auto">
+            <label for="coalitionSelect" class="text-sm font-medium">Виберіть коаліції:</label>
+            <select 
+              id="coalitionSelect" 
+              class="border rounded-lg px-4 py-2 shadow-sm focus:outline-none focus:ring focus:border-blue-500"
+              multiple
+              size="3"
+            >
+              <!-- Опції будуть додані динамічно -->
+            </select>
+          </div>
+        </div>
+        <div id="votesChart" style="height: 600px; width: 100%;"></div>
       </div>
     </div>
   </div>
-</div>
 
-<!-- Vote History Modal -->
-<div id="historyModal" class="modal">
-  <div class="modal-content">
-    <span class="close">&times;</span>
-    <h2 class="text-xl font-semibold mb-4">Історія голосів</h2>
-    <div id="historyContent" class="space-y-2"></div>
+  <!-- Vote History Modal -->
+  <div id="historyModal" class="modal">
+    <div class="modal-content">
+      <span class="close">&times;</span>
+      <h2 class="text-xl font-semibold mb-4">Історія голосів</h2>
+      <div id="historyContent" class="space-y-2"></div>
+    </div>
   </div>
-</div>
 
-<script>
+  <!-- Candidate Statistics Modal -->
+  <div id="candidateStatsModal" class="modal">
+    <div class="modal-content">
+      <span class="close">&times;</span>
+      <h2 class="text-xl font-semibold mb-4">Статистика кандидата</h2>
+      <div id="candidateStatsContent" class="space-y-2"></div>
+    </div>
+  </div>
 
+  <script>
+    const CONFIG = {
+      tags: {
+        "ДемСокира та партнери": [1, 2, 3, 5, 7, 8, 22, 23, 24, 31, 32, 33, 38, 39, 40],
+        "Коаліція Ярової": [37, 36, 35, 27, 26, 25, 17, 18, 10, 11],
+        "Сталкерята": [14, 19, 13, 21, 20]
+      },
+      tagColors: {
+        "ДемСокира та партнери": "bg-red-500 text-white",
+        "Коаліція Ярової": "bg-blue-500 text-white",
+        "Сталкерята": "bg-green-500 text-white"
+      },
+      candidateColors: {
+        1: '#FF6B6B', 2: '#4ECDC4', 3: '#45B7D1', 4: '#96CEB4', 5: '#FFEEAD',
+        6: '#D4A5A5', 7: '#9370DB', 8: '#20B2AA', 9: '#FFB6C1', 10: '#87CEEB',
+        11: '#FFA07A', 12: '#98FB98', 13: '#DDA0DD', 14: '#F0E68C', 15: '#E6E6FA',
+        16: '#FF69B4', 17: '#CD853F', 18: '#BA55D3', 19: '#32CD32', 20: '#FF4500',
+        21: '#4682B4', 22: '#D8BFD8', 23: '#DEB887', 24: '#5F9EA0', 25: '#FFC0CB',
+        26: '#FFD700', 27: '#ADFF2F', 28: '#4B0082', 29: '#F0E68C', 30: '#E6E6FA',
+        31: '#7FFFD4', 32: '#FF69B4', 33: '#8B4513', 34: '#6A5ACD', 35: '#D2691E',
+        36: '#FF4500', 37: '#2E8B57', 38: '#D2B48C', 39: '#DA70D6', 40: '#48D1CC'
+      },
+      updateInterval: 10 * 1000 // 10 секунд
+    };
 
-const CONFIG = {
-  tags: {
-    "ДемСокира та партнери": [1, 2, 3, 5, 7, 8, 22, 23, 24, 31, 32, 33, 38, 39, 40],
-    "Коаліція Ярової": [37, 36, 35, 27, 26, 25, 17, 18, 10, 11],
-    "Сталкерята": [14, 19, 13, 21, 20]
-  },
-  tagColors: {
-    "ДемСокира та партнери": "bg-red-500 text-white",
-    "Коаліція Ярової": "bg-blue-500 text-white",
-    "Сталкерята": "bg-green-500 text-white"
-  },
-  candidateColors: {
-    1: '#FF6B6B', 2: '#4ECDC4', 3: '#45B7D1', 4: '#96CEB4', 5: '#FFEEAD',
-    6: '#D4A5A5', 7: '#9370DB', 8: '#20B2AA', 9: '#FFB6C1', 10: '#87CEEB',
-    11: '#FFA07A', 12: '#98FB98', 13: '#DDA0DD', 14: '#F0E68C', 15: '#E6E6FA',
-    16: '#FF69B4', 17: '#CD853F', 18: '#BA55D3', 19: '#32CD32', 20: '#FF4500',
-    21: '#4682B4', 22: '#D8BFD8', 23: '#DEB887', 24: '#5F9EA0', 25: '#FFC0CB',
-    26: '#FFD700', 27: '#ADFF2F', 28: '#4B0082', 29: '#F0E68C', 30: '#E6E6FA',
-    31: '#7FFFD4', 32: '#FF69B4', 33: '#8B4513', 34: '#6A5ACD', 35: '#D2691E',
-    36: '#FF4500', 37: '#2E8B57', 38: '#D2B48C', 39: '#DA70D6', 40: '#48D1CC'
-  },
-  updateInterval: 10 * 60 * 1000 // 10 minutes
-};
+    let state = {
+      allCandidates: [],
+      topCandidates: [],
+      voteTimestamps: [],
+      selectedTags: [],
+      voteHistoryData: {},
+      chart: null,
+      uniqueVoters: 0
+    };
 
-let state = {
-  allCandidates: [],
-  topCandidates: [],
-  voteTimestamps: [],
-  selectedTag: null,
-  voteHistoryData: {},
-  chart: null
-};
+    // Utility Functions
+    const formatDate = date => new Date(date).toLocaleString('uk-UA');
+    const formatTime = date => new Date(date).toLocaleTimeString('uk-UA', { hour: '2-digit', minute: '2-digit' });
+    const getRandomColor = () => '#' + Math.floor(Math.random()*16777215).toString(16);
 
-// Utility Functions
-const formatDate = date => new Date(date).toLocaleString('uk-UA');
-const getRandomColor = () => '#' + Math.floor(Math.random()*16777215).toString(16);
+    // Data Fetching
+    async function fetchStats() {
+      showLoading();
+      try {
+        const res = await fetch('/api/stats'); // Замініть на ваш API-ендпоінт
+        const data = await res.json();
 
-// Data Fetching
-async function fetchStats() {
-  try {
-    const res = await fetch('/api/stats');
-    const data = await res.json();
-    
-    state.allCandidates = data.candidates.map(candidate => ({
-      ...candidate,
-      tags: Object.entries(CONFIG.tags)
-        .filter(([_, ids]) => ids.includes(Number(candidate.id)))
-        .map(([tagName]) => tagName)
-    }));
-    
-    state.voteTimestamps = data.voteTimestamps;
-    state.voteHistoryData = {};
-    state.allCandidates.forEach(candidate => {
-      state.voteHistoryData[candidate.id] = candidate.voteHistory;
-    });
+        state.allCandidates = data.candidates.map(candidate => ({
+          ...candidate,
+          tags: Object.entries(CONFIG.tags)
+            .filter(([_, ids]) => ids.includes(Number(candidate.id)))
+            .map(([tagName]) => tagName)
+        }));
 
-    state.topCandidates = state.allCandidates
-      .sort((a, b) => b.votes - a.votes)
-      .slice(0, 15)
-      .map(c => Number(c.id));
+        state.voteTimestamps = data.voteTimestamps;
+        state.voteHistoryData = {};
+        state.allCandidates.forEach(candidate => {
+          state.voteHistoryData[candidate.id] = candidate.voteHistory;
+        });
 
-    updateUI();
-    document.getElementById('lastUpdated').textContent = formatDate(data.timestamp);
-  } catch (err) {
-    console.error('Помилка завантаження:', err);
-  }
-}
+        state.topCandidates = state.allCandidates
+          .sort((a, b) => b.votes - a.votes)
+          .slice(0, 15)
+          .map(c => Number(c.id));
 
-// UI Updates
-function updateUI() {
-  renderTagsMap();
-  renderCandidates();
-  renderVoteChart();
-}
+        state.uniqueVoters = data.uniqueVoters;
 
-function renderTagsMap() {
-  const tagsHtml = Object.keys(CONFIG.tags).map(tag => `
-    <span 
-      class="px-4 py-2 rounded-full tag-block ${CONFIG.tagColors[tag]} hover:opacity-75 
-      ${state.selectedTag === tag ? 'ring-2 ring-offset-2 ring-blue-500' : ''}"
-      onclick="selectTag('${tag}')">
-      ${tag}
-    </span>
-  `).join('');
+        // Перевірка кумулятивних голосів
+        Object.entries(state.voteHistoryData).forEach(([candidateId, history]) => {
+          let previous = 0;
+          Object.entries(history).forEach(([timestamp, data]) => {
+            if (data.cumulativeVotes < previous) {
+              console.warn(`Кумулятивні голоси кандидата ${candidateId} зменшилися на ${timestamp}`);
+            }
+            previous = data.cumulativeVotes;
+          });
+        });
 
-  document.getElementById('tagsMap').innerHTML = tagsHtml;
-}
-
-function renderCandidates() {
-  const searchQuery = document.getElementById('searchInput').value.toLowerCase();
-  const sortType = document.getElementById('sortSelect').value;
-
-  let filtered = state.allCandidates.filter(c => 
-    c.name.toLowerCase().includes(searchQuery) && 
-    (!state.selectedTag || c.tags.includes(state.selectedTag))
-  );
-
-  filtered.sort((a, b) => {
-    switch (sortType) {
-      case 'votes': return b.votes - a.votes;
-      case 'id': return Number(a.id) - Number(b.id);
-      case 'name': return a.name.localeCompare(b.name);
-      default: return 0;
+        updateUI();
+        document.getElementById('lastUpdated').textContent = formatDate(data.timestamp);
+      } catch (err) {
+        console.error('Помилка завантаження:', err);
+        alert('Сталася помилка при завантаженні даних.');
+      } finally {
+        hideLoading();
+      }
     }
-  });
 
-  renderDesktopTable(filtered);
-  renderMobileCards(filtered);
-}
+    // UI Updates
+    function updateUI() {
+      renderTagsMap();
+      renderSummaryStatistics();
+      renderAdditionalStatistics();
+      renderCandidatesTable();
+      renderMobileCards();
+      renderVoteChart();
+    }
 
-function renderDesktopTable(candidates) {
-  const maxVotes = Math.max(...state.allCandidates.map(c => c.votes));
-  
-    const rowsHtml = candidates.map(c => {
-    const isTop = state.topCandidates.includes(Number(c.id));
-    const votePercentage = ((c.votes / maxVotes) * 100).toFixed(2);
-    
-    return `
-      <tr class="${isTop ? 'bg-blue-50' : ''} hover:bg-gray-50 transition-colors">
-        <td class="border px-4 py-3">${c.id}</td>
-        <td class="border px-4 py-3 font-medium">${c.name}</td>
-        <td class="border px-4 py-3">${c.ngo || '-'}</td>
-        <td class="border px-4 py-3">
-          <div class="flex items-center gap-3">
-            <span class="font-medium">${c.votes}</span>
-            <div class="flex-1">
+    function renderTagsMap() {
+      const tagsHtml = Object.keys(CONFIG.tags).map(tag => `
+        <span 
+          class="px-4 py-2 rounded-full tag-block ${CONFIG.tagColors[tag]} 
+          ${state.selectedTags.includes(tag) ? 'ring-2 ring-offset-2 ring-blue-500' : ''}"
+          onclick="toggleTag('${tag}')">
+          ${tag}
+          <span class="ml-2 text-sm opacity-75">(${CONFIG.tags[tag].length})</span>
+        </span>
+      `).join('');
+
+      document.getElementById('tagsMap').innerHTML = tagsHtml;
+    }
+
+    function renderSummaryStatistics() {
+      const totalVotes = state.allCandidates.reduce((sum, candidate) => sum + candidate.votes, 0);
+      const totalCandidates = state.allCandidates.length;
+      const totalCoalitions = new Set(state.allCandidates.flatMap(c => c.tags)).size;
+      const averageVotes = (totalVotes / (totalCandidates || 1)).toFixed(2);
+      const topCoalition = getTopCoalition();
+
+      document.getElementById('cumulativeVotes').textContent = totalVotes.toLocaleString('uk-UA');
+      document.getElementById('totalCandidates').textContent = totalCandidates;
+      document.getElementById('totalCoalitions').textContent = totalCoalitions;
+      document.getElementById('averageVotes').textContent = averageVotes.toLocaleString('uk-UA');
+      document.getElementById('topCoalition').textContent = topCoalition || '-';
+    }
+
+    function renderAdditionalStatistics() {
+      const totalVotes = state.allCandidates.reduce((sum, candidate) => sum + candidate.votes, 0);
+      const totalCandidates = state.allCandidates.length;
+      const averagePercentageVotes = ((totalVotes / (totalCandidates || 1)) / totalVotes * 100).toFixed(2) + '%';
+      
+      // Розподіл голосів за коаліціями - припустимо, що це загальна кількість голосів поділена на кількість коаліцій
+      const totalCoalitions = new Set(state.allCandidates.flatMap(c => c.tags)).size;
+      const votesByCoalition = totalCoalitions > 0 ? ((totalVotes / totalCoalitions) / totalVotes * 100).toFixed(2) + '%' : '0%';
+
+      document.getElementById('averagePercentageVotes').textContent = averagePercentageVotes;
+      document.getElementById('uniqueVoters').textContent = state.uniqueVoters.toLocaleString('uk-UA');
+      document.getElementById('votesByCoalition').textContent = votesByCoalition;
+    }
+
+    function getTopCoalition() {
+      const coalitionVotes = {};
+
+      state.allCandidates.forEach(candidate => {
+        candidate.tags.forEach(tag => {
+          if (!coalitionVotes[tag]) coalitionVotes[tag] = 0;
+          coalitionVotes[tag] += candidate.votes;
+        });
+      });
+
+      let top = null;
+      let maxVotes = -1;
+      Object.entries(coalitionVotes).forEach(([tag, votes]) => {
+        if (votes > maxVotes) {
+          maxVotes = votes;
+          top = tag;
+        }
+      });
+
+      return top;
+    }
+
+    function renderCandidatesTable() {
+      const searchQuery = document.getElementById('searchInput').value.toLowerCase();
+      const sortType = document.getElementById('sortSelect').value;
+
+      let filtered = state.allCandidates.filter(c => 
+        c.name.toLowerCase().includes(searchQuery) && 
+        (state.selectedTags.length === 0 || c.tags.some(tag => state.selectedTags.includes(tag)))
+      );
+
+      filtered.sort((a, b) => {
+        switch (sortType) {
+          case 'votes': return b.votes - a.votes;
+          case 'id': return Number(a.id) - Number(b.id);
+          case 'name': return a.name.localeCompare(b.name);
+          default: return 0;
+        }
+      });
+
+      const maxVotes = Math.max(...state.allCandidates.map(c => c.votes), 1); // Уникнення ділення на 0
+
+      const rowsHtml = filtered.map(c => {
+        const isTop = state.topCandidates.includes(Number(c.id));
+        const votePercentage = ((c.votes / maxVotes) * 100).toFixed(2);
+
+        return `
+          <tr class="${isTop ? 'bg-blue-50' : 'table-row-hover'}">
+            <td class="px-6 py-3">${c.id}</td>
+            <td class="px-6 py-3 font-medium">${c.name}</td>
+            <td class="px-6 py-3">${c.ngo || '-'}</td>
+            <td class="px-6 py-3">
+              <div class="flex items-center gap-3">
+                <span class="font-medium">${c.votes.toLocaleString('uk-UA')}</span>
+                <div class="flex-1">
+                  <div class="vote-bar">
+                    <div class="vote-bar-fill" style="width: ${votePercentage}%"></div>
+                  </div>
+                </div>
+              </div>
+            </td>
+            <td class="px-6 py-3">
+              <div class="flex flex-wrap gap-1">
+                ${c.tags.map(tag => `
+                  <span 
+                    onclick="toggleTag('${tag}')"
+                    class="clickable-tag ${CONFIG.tagColors[tag]}"
+                  >${tag}</span>
+                `).join('')}
+              </div>
+            </td>
+            <td class="px-6 py-3">
+              <button 
+                onclick="showVoteHistory(${c.id})"
+                class="p-2 hover:bg-gray-100 rounded-full transition-colors history-icon"
+                title="Переглянути історію голосів"
+              >
+                📜
+              </button>
+            </td>
+            <td class="px-6 py-3">
+              <button 
+                onclick="showCandidateStats(${c.id})"
+                class="p-2 hover:bg-gray-100 rounded-full transition-colors candidate-stats-icon"
+                title="Переглянути статистику кандидата"
+              >
+                📊
+              </button>
+            </td>
+          </tr>
+        `;
+      }).join('');
+
+      document.getElementById('candidatesTableBody').innerHTML = rowsHtml;
+    }
+
+    function renderMobileCards() {
+      const searchQuery = document.getElementById('searchInput').value.toLowerCase();
+      const sortType = document.getElementById('sortSelect').value;
+
+      let filtered = state.allCandidates.filter(c => 
+        c.name.toLowerCase().includes(searchQuery) && 
+        (state.selectedTags.length === 0 || c.tags.some(tag => state.selectedTags.includes(tag)))
+      );
+
+      filtered.sort((a, b) => {
+        switch (sortType) {
+          case 'votes': return b.votes - a.votes;
+          case 'id': return Number(a.id) - Number(b.id);
+          case 'name': return a.name.localeCompare(b.name);
+          default: return 0;
+        }
+      });
+
+      const maxVotes = Math.max(...state.allCandidates.map(c => c.votes), 1); // Уникнення ділення на 0
+
+      const cardsHtml = filtered.map(c => {
+        const isTop = state.topCandidates.includes(Number(c.id));
+        const votePercentage = ((c.votes / maxVotes) * 100).toFixed(2);
+
+        return `
+          <div class="stats-card p-4 ${isTop ? 'border-l-4 border-blue-400' : ''} bg-white">
+            <div class="flex justify-between items-start mb-3">
+              <div class="font-bold text-lg text-gray-900">${c.name}</div>
+              <div class="text-sm text-gray-500 bg-gray-100 px-2 py-1 rounded">ID: ${c.id}</div>
+            </div>
+            <div class="text-sm text-gray-600 mb-3">${c.ngo || '-'}</div>
+            <div class="mb-4">
+              <div class="font-semibold mb-2 text-gray-900">${c.votes.toLocaleString('uk-UA')} голосів</div>
               <div class="vote-bar">
                 <div class="vote-bar-fill" style="width: ${votePercentage}%"></div>
               </div>
             </div>
+            <div class="flex flex-wrap gap-1 mb-3">
+              ${c.tags.map(tag => `
+                <span 
+                  onclick="toggleTag('${tag}')"
+                  class="clickable-tag ${CONFIG.tagColors[tag]}"
+                >${tag}</span>
+              `).join('')}
+            </div>
+            <div class="flex justify-between">
+              <button 
+                onclick="showVoteHistory(${c.id})"
+                class="py-2 px-4 bg-gray-50 hover:bg-gray-100 rounded-lg text-center text-gray-600 transition-colors flex items-center"
+              >
+                📜 Історія
+              </button>
+              <button 
+                onclick="showCandidateStats(${c.id})"
+                class="py-2 px-4 bg-gray-50 hover:bg-gray-100 rounded-lg text-center text-gray-600 transition-colors flex items-center"
+              >
+                📊 Статистика
+              </button>
+            </div>
           </div>
-        </td>
-        <td class="border px-4 py-3">
-          <div class="flex flex-wrap gap-1">
-            ${c.tags.map(tag => `
-              <span 
-                onclick="selectTag('${tag}')" 
-                class="clickable-tag ${CONFIG.tagColors[tag]}"
-              >${tag}</span>
-            `).join('')}
+        `;
+      }).join('');
+
+      document.getElementById('candidatesMobileView').innerHTML = cardsHtml;
+    }
+
+    // Vote History Modal Management
+    let voteHistoryCache = new Map();
+
+    function showVoteHistory(candidateId) {
+      const modal = document.getElementById('historyModal');
+      
+      if (voteHistoryCache.has(candidateId)) {
+        document.getElementById('historyContent').innerHTML = voteHistoryCache.get(candidateId);
+        modal.style.display = "block";
+        return;
+      }
+
+      const candidate = state.allCandidates.find(c => c.id == candidateId);
+      const history = state.voteHistoryData[candidateId];
+
+      const historyContent = Object.entries(history)
+        .sort(([a], [b]) => new Date(a) - new Date(b)) // Сортування за часом
+        .map(([timestamp, data]) => `
+          <div class="py-2 border-b last:border-0">
+            <div class="font-medium text-gray-900">${formatTime(timestamp)}</div>
+            <div class="text-sm text-gray-600">
+              Голосів: ${data.votes.toLocaleString('uk-UA')} 
+              <span class="mx-2">•</span>
+              Всього: ${data.cumulativeVotes.toLocaleString('uk-UA')}
+            </div>
           </div>
-        </td>
-        <td class="border px-4 py-3">
-          <button 
-            onclick="showVoteHistory(${c.id})"
-            class="p-2 hover:bg-gray-100 rounded-full transition-colors history-icon"
-          >📊</button>
-        </td>
-      </tr>
-    `;
-  }).join('');
+        `).join('');
 
-
-  document.getElementById('candidatesTableBody').innerHTML = rowsHtml;
-}
-
-function renderMobileCards(candidates) {
-  const maxVotes = Math.max(...state.allCandidates.map(c => c.votes));
-  
-  const cardsHtml = candidates.map(c => {
-    const isTop = state.topCandidates.includes(Number(c.id));
-    const votePercentage = ((c.votes / maxVotes) * 100).toFixed(2);
-    
-    return `
-      <div class="stats-card p-4 ${isTop ? 'border-l-4 border-blue-400' : ''}">
-        <div class="flex justify-between items-start mb-3">
-          <div class="font-bold text-lg">${c.name}</div>
-          <div class="text-sm text-gray-500 bg-gray-100 px-2 py-1 rounded">ID: ${c.id}</div>
-        </div>
-        <div class="text-sm text-gray-600 mb-3">${c.ngo || '-'}</div>
+      const content = `
         <div class="mb-4">
-          <div class="font-semibold mb-2">${c.votes.toLocaleString('uk-UA')} голосів</div>
-          <div class="vote-bar">
-            <div class="vote-bar-fill" style="width: ${votePercentage}%"></div>
+          <h3 class="font-bold text-lg text-gray-900">${candidate.name}</h3>
+          <p class="text-gray-600">ID: ${candidate.id}</p>
+        </div>
+        <div class="divide-y">${historyContent}</div>
+      `;
+
+      voteHistoryCache.set(candidateId, content);
+      
+      document.getElementById('historyContent').innerHTML = content;
+      modal.style.display = "block";
+    }
+
+    // Candidate Statistics Modal Management
+    let candidateStatsCache = new Map();
+
+    function showCandidateStats(candidateId) {
+      const modal = document.getElementById('candidateStatsModal');
+      
+      if (candidateStatsCache.has(candidateId)) {
+        document.getElementById('candidateStatsContent').innerHTML = candidateStatsCache.get(candidateId);
+        modal.style.display = "block";
+        return;
+      }
+
+      const candidate = state.allCandidates.find(c => c.id == candidateId);
+      const history = state.voteHistoryData[candidateId];
+
+      // Обчислення додаткових статистик
+      const totalVotes = candidate.votes;
+      const averageVoteTime = calculateAverageVoteTime(history);
+      const peakVote = getPeakVote(history);
+
+      const statsContent = `
+        <div class="mb-4">
+          <h3 class="font-bold text-lg text-gray-900">${candidate.name}</h3>
+          <p class="text-gray-600">ID: ${candidate.id}</p>
+        </div>
+        <div class="space-y-2">
+          <div class="py-2">
+            <span class="font-medium text-gray-900">Загальні голоси:</span> ${totalVotes.toLocaleString('uk-UA')}
+          </div>
+          <div class="py-2">
+            <span class="font-medium text-gray-900">Середній час отримання голосу:</span> ${averageVoteTime} хвилин
+          </div>
+          <div class="py-2">
+            <span class="font-medium text-gray-900">Пік голосів:</span> ${peakVote.votes.toLocaleString('uk-UA')} голосів о ${formatTime(peakVote.timestamp)}
           </div>
         </div>
-        <div class="flex flex-wrap gap-1 mb-3">
-          ${c.tags.map(tag => `
-            <span 
-              onclick="selectTag('${tag}')" 
-              class="clickable-tag ${CONFIG.tagColors[tag]}"
-            >${tag}</span>
-          `).join('')}
-        </div>
-        <button 
-          onclick="showVoteHistory(${c.id})"
-          class="w-full py-2 bg-gray-50 hover:bg-gray-100 rounded-lg text-center text-gray-600 transition-colors"
-        >
-          📊 Історія голосів
-        </button>
-      </div>
-    `;
-  }).join('');
+      `;
 
-  document.getElementById('candidatesMobileView').innerHTML = cardsHtml;
-}
+      candidateStatsCache.set(candidateId, statsContent);
+      
+      document.getElementById('candidateStatsContent').innerHTML = statsContent;
+      modal.style.display = "block";
+    }
 
-function showVoteHistory(candidateId) {
-  const candidate = state.allCandidates.find(c => c.id == candidateId);
-  const history = state.voteHistoryData[candidateId];
-  
-  const historyContent = Object.entries(history)
-    .sort(([a], [b]) => new Date(b) - new Date(a))
-    .map(([timestamp, data]) => `
-      <div class="py-2 border-b last:border-0">
-        <div class="font-medium">${formatDate(timestamp)}</div>
-        <div class="text-sm text-gray-600">
-          Голосів: ${data.votes} 
-          <span class="mx-2">•</span>
-          Всього: ${data.cumulativeVotes}
-        </div>
-      </div>
-    `).join('');
+    // Helper Functions for Candidate Stats
+    function calculateAverageVoteTime(history) {
+      const timestamps = Object.keys(history).sort((a, b) => new Date(a) - new Date(b));
+      if (timestamps.length < 2) return 'N/A';
+      
+      let totalTime = 0;
+      for (let i = 1; i < timestamps.length; i++) {
+        const prev = new Date(timestamps[i-1]);
+        const current = new Date(timestamps[i]);
+        const diff = (current - prev) / (1000 * 60); // В хвилинах
+        totalTime += diff;
+      }
+      const average = (totalTime / (timestamps.length - 1)).toFixed(2);
+      return average;
+    }
 
-  document.getElementById('historyContent').innerHTML = `
-    <div class="mb-4">
-      <h3 class="font-bold text-lg">${candidate.name}</h3>
-      <p class="text-gray-600">ID: ${candidate.id}</p>
-    </div>
-    <div class="divide-y">${historyContent}</div>
-  `;
-  
-  document.getElementById('historyModal').style.display = "block";
-}
+    function getPeakVote(history) {
+      let peak = { votes: 0, timestamp: null };
+      Object.entries(history).forEach(([timestamp, data]) => {
+        if (data.votes > peak.votes) {
+          peak = { votes: data.votes, timestamp };
+        }
+      });
+      return peak;
+    }
 
-// Додаємо функцію selectTag до глобального скопу
-function selectTag(tag) {
-  // Якщо клікнули на вже вибраний тег - знімаємо виділення
-  state.selectedTag = state.selectedTag === tag ? null : tag;
-  
-  // Оновлюємо UI для відображення вибраного тегу
-  renderTagsMap();
-  renderCandidates();
-  
-  // Оновлюємо графік для відображення кандидатів вибраної коаліції
-  document.getElementById('coalitionSelect').value = state.selectedTag || 'all';
-  renderVoteChart();
-}
+    // Toggle Tag Selection
+    function toggleTag(tag) {
+      const index = state.selectedTags.indexOf(tag);
+      if (index > -1) {
+        state.selectedTags.splice(index, 1);
+      } else {
+        state.selectedTags.push(tag);
+      }
+      renderTagsMap();
+      renderSummaryStatistics();
+      renderAdditionalStatistics();
+      renderCandidatesTable();
+      renderMobileCards();
+      renderVoteChart();
+    }
 
-// Оновлена функція renderTagsMap для кращої інтерактивності
-function renderTagsMap() {
-  const tagsHtml = Object.keys(CONFIG.tags).map(tag => `
-    <span 
-      class="px-4 py-2 rounded-full tag-block ${CONFIG.tagColors[tag]} 
-      ${state.selectedTag === tag ? 'ring-2 ring-offset-2 ring-blue-500' : ''} 
-      hover:opacity-75 cursor-pointer"
-      onclick="selectTag('${tag}')"
-    >
-      ${tag}
-      <span class="ml-2 text-sm opacity-75">(${CONFIG.tags[tag].length})</span>
-    </span>
-  `).join('');
+    // Chart Rendering with Highcharts
+    function renderVoteChart() {
+      const selectedCoalitions = Array.from(document.getElementById('coalitionSelect').selectedOptions).map(option => option.value);
+      state.selectedTagsForChart = selectedCoalitions;
+      
+      const chartData = prepareChartData();
 
-  document.getElementById('tagsMap').innerHTML = tagsHtml;
-}
+      if (state.chart) {
+        state.chart.destroy();
+      }
 
-function renderVoteChart() {
-  const ctx = document.getElementById('votesChart').getContext('2d');
-  const selectedCoalition = document.getElementById('coalitionSelect').value;
-
-  if (state.chart) {
-    state.chart.destroy();
-  }
-
-  const chartData = prepareChartData(selectedCoalition);
-
-  // Custom chart gradient
-  const gradient = ctx.createLinearGradient(0, 0, 0, 400);
-  gradient.addColorStop(0, 'rgba(59, 130, 246, 0.1)');
-  gradient.addColorStop(1, 'rgba(59, 130, 246, 0)');
-
-  state.chart = new Chart(ctx, {
-    type: 'line',
-    data: chartData,
-    options: {
-      responsive: true,
-      maintainAspectRatio: false,
-      interaction: {
-        intersect: false,
-        mode: 'index',
-        axis: 'x'
-      },
-      plugins: {
-        zoom: {
-          pan: {
-            enabled: true,
-            mode: 'x',
-            modifierKey: 'ctrl',
-          },
-          zoom: {
-            wheel: {
-              enabled: true,
-              modifierKey: 'ctrl',
-            },
-            pinch: {
-              enabled: true
-            },
-            mode: 'x',
-            drag: {
-              enabled: true,
-              backgroundColor: 'rgba(59, 130, 246, 0.1)',
-              borderColor: 'rgba(59, 130, 246, 0.4)',
-              borderWidth: 1
+      state.chart = Highcharts.chart('votesChart', {
+        chart: {
+          type: 'line',
+          zoomType: 'x',
+          panning: true,
+          panKey: 'shift',
+          height: 600,
+          events: {
+            load: function () {
+              // Initial highlight
             }
           },
-          limits: {
-            x: {min: 'original', max: 'original'},
+          zoomBySingleTouch: true,
+        },
+        title: {
+          text: 'Графік голосів'
+        },
+        subtitle: {
+          text: 'Дані оновлюються автоматично'
+        },
+        xAxis: {
+          type: 'datetime',
+          title: {
+            text: 'Час'
+          },
+          labels: {
+            format: '{value:%d.%m.%Y %H:%M}',
+            style: {
+              fontSize: '11px',
+              fontFamily: 'Inter, sans-serif'
+            }
           }
         },
-        legend: {
-          position: 'bottom',
-          align: 'start',
-          labels: {
-            boxWidth: 12,
-            usePointStyle: true,
-            padding: 15,
-            font: {
-              size: 12,
-              family: "'Inter', system-ui, sans-serif",
-              weight: '500'
-            }
+        yAxis: {
+          title: {
+            text: 'Кількість голосів'
           },
-          maxHeight: 150,
-          overflow: 'auto'
+          labels: {
+            formatter: function () {
+              return this.value.toLocaleString('uk-UA');
+            }
+          }
         },
         tooltip: {
-          backgroundColor: 'rgba(255, 255, 255, 0.98)',
-          titleColor: '#1e293b',
-          bodyColor: '#334155',
-          borderColor: '#e2e8f0',
-          borderWidth: 1,
-          padding: {
-            top: 10,
-            right: 15,
-            bottom: 10,
-            left: 15
-          },
-          displayColors: true,
-          boxWidth: 8,
-          boxHeight: 8,
-          cornerRadius: 6,
-          titleFont: {
-            size: 13,
-            weight: '600',
-            family: "'Inter', system-ui, sans-serif"
-          },
-          bodyFont: {
-            size: 12,
-            family: "'Inter', system-ui, sans-serif"
-          },
-          filter: function(tooltipItem) {
-            // Only show tooltip for the hovered dataset
-            return tooltipItem.datasetIndex === tooltipItem.chart.getActiveElements()[0]?.datasetIndex;
-          },
-          callbacks: {
-            label: function(context) {
-              const label = context.dataset.label || '';
-              const value = context.parsed.y;
-              return `${label}: ${value.toLocaleString('uk-UA')} голосів`;
-            }
-          }
-        }
-      },
-      scales: {
-        x: {
-          grid: {
-            display: false
-          },
-          border: {
-            display: true,
-            color: '#e2e8f0'
-          },
-          ticks: {
-            maxRotation: 45,
-            minRotation: 45,
-            padding: 8,
-            font: {
-              size: 11,
-              family: "'Inter', system-ui, sans-serif"
-            },
-            color: '#64748b'
+          shared: false,
+          formatter: function () {
+            return `<b>${Highcharts.dateFormat('%d.%m.%Y %H:%M', this.x)}</b><br/><span style="color:${this.point.color}">\u25CF</span> ${this.series.name}: ${this.y.toLocaleString('uk-UA')} голосів`;
           }
         },
-        y: {
-          beginAtZero: true,
-          border: {
-            display: true,
-            color: '#e2e8f0'
-          },
-          grid: {
-            color: '#f1f5f9',
-            drawBorder: false,
-            lineWidth: 1
-          },
-          ticks: {
-            padding: 10,
-            font: {
-              size: 11,
-              family: "'Inter', system-ui, sans-serif"
+        plotOptions: {
+          series: {
+            cursor: 'pointer',
+            states: {
+              hover: {
+                enabled: true,
+                lineWidth: 3
+              }
             },
-            color: '#64748b',
-            callback: function(value) {
-              return value.toLocaleString('uk-UA');
+            marker: {
+              enabled: true,
+              radius: 4,
+              symbol: 'circle'
+            },
+            events: {
+              click: function (event) {
+                alert(`Кандидат: ${this.name}\nГолоси: ${event.point.y.toLocaleString('uk-UA')}`);
+              },
+              mouseOver: function () {
+                this.chart.series.forEach(function (s) {
+                  if (s !== this) {
+                    s.update({ opacity: 0.2 }, false);
+                  }
+                }, this);
+                this.update({ opacity: 1 }, false);
+                this.chart.redraw();
+              },
+              mouseOut: function () {
+                this.chart.series.forEach(function (s) {
+                  s.update({ opacity: 1 }, false);
+                });
+                this.chart.redraw();
+              }
+            }
+          },
+          line: {
+            marker: {
+              enabled: true
             }
           }
-        }
-      },
-      elements: {
-        line: {
-          tension: 0.3,
-          borderWidth: 2.5
         },
-        point: {
-          radius: 0,
-          hoverRadius: 6,
-          backgroundColor: 'white',
-          borderWidth: 2.5,
-          hitRadius: 6
+        series: chartData.datasets.map(dataset => ({
+          name: dataset.label,
+          data: dataset.data.map(point => [point.x, point.y]),
+          color: dataset.borderColor,
+          lineWidth: 2.5,
+          marker: {
+            radius: 4,
+            symbol: 'circle'
+          }
+        })),
+        legend: {
+          enabled: true,
+          layout: 'vertical',
+          align: 'right',
+          verticalAlign: 'middle',
+          maxHeight: 400,
+          itemStyle: {
+            fontSize: '10px',
+            fontFamily: 'Inter, sans-serif'
+          }
+        },
+        credits: {
+          enabled: false
+        },
+        boost: {
+          useGPUTranslations: true
+        },
+        navigator: {
+          enabled: true,
+          height: 20,
+          margin: 10
+        },
+        rangeSelector: {
+          enabled: true,
+          buttons: [{
+            type: 'day',
+            count: 7,
+            text: '7 днів'
+          }, {
+            type: 'month',
+            count: 1,
+            text: '1 місяць'
+          }, {
+            type: 'all',
+            text: 'Всі'
+          }],
+          selected: 2
+        },
+        exporting: {
+          buttons: {
+            customButton: {
+              text: 'Скинути зум',
+              onclick: function () {
+                this.xAxis[0].setExtremes();
+              },
+              align: 'right',
+              verticalAlign: 'top',
+              y: 0
+            }
+          }
+        },
+        responsive: {
+          rules: [{
+            condition: {
+              maxWidth: 800
+            },
+            chartOptions: {
+              legend: {
+                layout: 'horizontal',
+                align: 'center',
+                verticalAlign: 'bottom'
+              }
+            }
+          }]
         }
-      }
-    }
-  });
-
-  // Add reset zoom button
-  const resetZoomButton = document.createElement('button');
-  resetZoomButton.textContent = '🔍 Скинути масштаб';
-  resetZoomButton.className = 'px-4 py-2 bg-blue-500 text-white rounded-lg shadow hover:bg-blue-600 transition-colors mt-4';
-  resetZoomButton.onclick = () => {
-    state.chart.resetZoom();
-  };
-
-  const chartContainer = document.querySelector('.chart-container');
-  chartContainer.appendChild(resetZoomButton);
-}
-
-// Configuration and state objects remain the same at the top
-
-// Fixed prepareChartData function with missing closing brace and optimizations
-function prepareChartData(selectedCoalition) {
-  const datasets = [];
-  const allTimestamps = new Set();
-  const timestampValues = {};
-
-  // Pre-process timestamps and values to avoid nested loops
-  Object.entries(state.voteHistoryData).forEach(([candidateId, history]) => {
-    Object.entries(history).forEach(([timestamp, data]) => {
-      allTimestamps.add(timestamp);
-      if (!timestampValues[timestamp]) {
-        timestampValues[timestamp] = {};
-      }
-      timestampValues[timestamp][candidateId] = data.cumulativeVotes;
-    });
-  });
-
-  // Sort timestamps once
-  const sortedTimestamps = Array.from(allTimestamps).sort();
-
-  // Create datasets more efficiently
-  state.allCandidates.forEach(candidate => {
-    if (selectedCoalition === 'all' || candidate.tags.includes(selectedCoalition)) {
-      const candidateData = sortedTimestamps.map(timestamp => ({
-        x: formatDate(timestamp),
-        y: timestampValues[timestamp]?.[candidate.id] || null
-      }));
-
-      datasets.push({
-        label: `${candidate.name} (ID: ${candidate.id})`,
-        data: candidateData,
-        borderColor: CONFIG.candidateColors[candidate.id] || getRandomColor(),
-        backgroundColor: 'transparent',
-        tension: 0.3,
-        borderWidth: 2,
-        pointRadius: 3,
-        pointHoverRadius: 6,
-        spanGaps: true
       });
     }
-  });
 
-  return {
-    labels: sortedTimestamps.map(formatDate),
-    datasets: datasets
-  };
-}
+    // Prepare Data for Highcharts
+    function prepareChartData() {
+      const datasets = [];
+      const allTimestamps = new Set();
+      const timestampValues = {};
 
-// Add cache for vote history
-let voteHistoryCache = new Map();
+      Object.entries(state.voteHistoryData).forEach(([candidateId, history]) => {
+        Object.entries(history).forEach(([timestamp, data]) => {
+          allTimestamps.add(timestamp);
+          if (!timestampValues[timestamp]) {
+            timestampValues[timestamp] = {};
+          }
+          // Забезпечте, що cumulativeVotes не зменшуються
+          if (!timestampValues[timestamp][candidateId] || data.cumulativeVotes >= timestampValues[timestamp][candidateId]) {
+            timestampValues[timestamp][candidateId] = data.cumulativeVotes;
+          }
+        });
+      });
 
-function showVoteHistory(candidateId) {
-  // Check cache first
-  if (voteHistoryCache.has(candidateId)) {
-    document.getElementById('historyContent').innerHTML = voteHistoryCache.get(candidateId);
-    document.getElementById('historyModal').style.display = "block";
-    return;
-  }
+      const sortedTimestamps = Array.from(allTimestamps).sort((a, b) => new Date(a) - new Date(b));
 
-  const candidate = state.allCandidates.find(c => c.id == candidateId);
-  const history = state.voteHistoryData[candidateId];
-  
-  const historyContent = Object.entries(history)
-    .sort(([a], [b]) => new Date(b) - new Date(a))
-    .map(([timestamp, data]) => `
-      <div class="py-2 border-b last:border-0">
-        <div class="font-medium">${formatDate(timestamp)}</div>
-        <div class="text-sm text-gray-600">
-          Голосів: ${data.votes} 
-          <span class="mx-2">•</span>
-          Всього: ${data.cumulativeVotes}
-        </div>
-      </div>
-    `).join('');
+      state.allCandidates.forEach(candidate => {
+        const belongsToSelectedCoalition = state.selectedTagsForChart.length === 0 || candidate.tags.some(tag => state.selectedTagsForChart.includes(tag));
 
-  const content = `
-    <div class="mb-4">
-      <h3 class="font-bold text-lg">${candidate.name}</h3>
-      <p class="text-gray-600">ID: ${candidate.id}</p>
-    </div>
-    <div class="divide-y">${historyContent}</div>
-  `;
+        if (belongsToSelectedCoalition) {
+          let lastCumulative = 0;
+          const candidateData = sortedTimestamps.map(timestamp => {
+            const current = timestampValues[timestamp]?.[candidate.id] || lastCumulative;
+            lastCumulative = current;
+            return {
+              x: new Date(timestamp).getTime(),
+              y: current
+            };
+          });
 
-  // Cache the generated content
-  voteHistoryCache.set(candidateId, content);
-  
-  document.getElementById('historyContent').innerHTML = content;
-  document.getElementById('historyModal').style.display = "block";
-}
+          datasets.push({
+            label: `${candidate.name}`,
+            data: candidateData,
+            borderColor: CONFIG.candidateColors[candidate.id] || getRandomColor(),
+            boostThreshold: 1
+          });
+        }
+      });
 
-// Optimize candidate rendering with memoization
-const memoizedRenderCandidates = (() => {
-  let lastSearch = '';
-  let lastSort = '';
-  let lastTag = null;
-  let lastResult = null;
-
-  return () => {
-    const currentSearch = document.getElementById('searchInput').value.toLowerCase();
-    const currentSort = document.getElementById('sortSelect').value;
-    const currentTag = state.selectedTag;
-
-    // Return cached result if nothing has changed
-    if (lastSearch === currentSearch && 
-        lastSort === currentSort && 
-        lastTag === currentTag && 
-        lastResult) {
-      return lastResult;
+      return {
+        labels: sortedTimestamps.map(timestamp => new Date(timestamp).getTime()),
+        datasets: datasets
+      };
     }
 
-    // Update cache values
-    lastSearch = currentSearch;
-    lastSort = currentSort;
-    lastTag = currentTag;
+    // Event Listeners and Initialization
+    document.addEventListener('DOMContentLoaded', () => {
+      // Ініціалізація вибору коаліцій
+      document.getElementById('coalitionSelect').innerHTML = `
+        ${Object.keys(CONFIG.tags).map(tag => `<option value="${tag}">${tag}</option>`).join('')}
+      `;
 
-    let filtered = state.allCandidates.filter(c => 
-      c.name.toLowerCase().includes(currentSearch) && 
-      (!currentTag || c.tags.includes(currentTag))
-    );
+      // Додати обробник для кнопки фільтрів на мобільних пристроях
+      document.getElementById('toggleFiltersBtn').addEventListener('click', () => {
+        const filtersSection = document.getElementById('filtersSection');
+        if (filtersSection.classList.contains('hidden')) {
+          filtersSection.classList.remove('hidden');
+          filtersSection.classList.add('active');
+        } else {
+          filtersSection.classList.add('hidden');
+          filtersSection.classList.remove('active');
+        }
+      });
 
-    filtered.sort((a, b) => {
-      switch (currentSort) {
-        case 'votes': return b.votes - a.votes;
-        case 'id': return Number(a.id) - Number(b.id);
-        case 'name': return a.name.localeCompare(b.name);
-        default: return 0;
-      }
+      // Додати обробники подій для модальних вікон
+      const historyModal = document.getElementById('historyModal');
+      const candidateStatsModal = document.getElementById('candidateStatsModal');
+      const closeModal = () => { 
+        historyModal.style.display = "none"; 
+        candidateStatsModal.style.display = "none"; 
+      };
+      document.querySelectorAll('.close').forEach(elem => {
+        elem.addEventListener('click', closeModal);
+      });
+      window.addEventListener('click', (event) => {
+        if (event.target === historyModal || event.target === candidateStatsModal) {
+          closeModal();
+        }
+      });
+
+      // Додати обробники для фільтрів таблиці
+      const debouncedRenderTable = debounce(renderCandidatesTable, 250);
+      document.getElementById('searchInput').addEventListener('input', () => {
+        debouncedRenderTable();
+      });
+      document.getElementById('sortSelect').addEventListener('change', () => {
+        debouncedRenderTable();
+      });
+
+      // Додати обробники для фільтрів графіку
+      document.getElementById('coalitionSelect').addEventListener('change', () => {
+        const selectedOptions = Array.from(document.getElementById('coalitionSelect').selectedOptions).map(option => option.value);
+        state.selectedTagsForChart = selectedOptions;
+        renderVoteChart();
+      });
+
+      // Додати обробник для кнопки оновлення
+      document.getElementById('refreshBtn').addEventListener('click', fetchStats);
+
+      // Початкове завантаження даних
+      fetchStats();
+
+      // Налаштування періодичного оновлення
+      setInterval(() => {
+        fetchStats().catch(console.error);
+      }, CONFIG.updateInterval);
     });
 
-    renderDesktopTable(filtered);
-    renderMobileCards(filtered);
-
-    lastResult = filtered;
-    return filtered;
-  };
-})();
-
-// Update the event listeners to use memoized function
-document.addEventListener('DOMContentLoaded', () => {
-  // Initialize coalition select
-  document.getElementById('coalitionSelect').innerHTML = `
-    <option value="all">Всі коаліції</option>
-    ${Object.keys(CONFIG.tags).map(tag => 
-      `<option value="${tag}">${tag}</option>`
-    ).join('')}
-  `;
-
-  // Add debounced event listeners for better performance
-  const debouncedRender = debounce(memoizedRenderCandidates, 250);
-  
-  document.getElementById('refreshBtn').addEventListener('click', fetchStats);
-  document.getElementById('searchInput').addEventListener('input', debouncedRender);
-  document.getElementById('sortSelect').addEventListener('change', debouncedRender);
-  document.getElementById('coalitionSelect').addEventListener('change', renderVoteChart);
-  
-  // Modal close handlers with improved event delegation
-  const modal = document.getElementById('historyModal');
-  
-  document.addEventListener('click', (event) => {
-    if (event.target.classList.contains('close') || 
-        (event.target === modal)) {
-      modal.style.display = "none";
+    // Utility debounce function
+    function debounce(func, wait) {
+      let timeout;
+      return function executedFunction(...args) {
+        const later = () => {
+          clearTimeout(timeout);
+          func(...args);
+        };
+        clearTimeout(timeout);
+        timeout = setTimeout(later, wait);
+      };
     }
-  });
 
-  // Initial data fetch
-  fetchStats();
-  
-  // Set up periodic refresh with error handling
-  setInterval(() => {
-    fetchStats().catch(console.error);
-  }, CONFIG.updateInterval);
-});
+    // Loading Indicator
+    function showLoading() {
+      if (!document.getElementById('loadingSpinner')) {
+        const loader = document.createElement('div');
+        loader.className = 'loading-spinner';
+        loader.id = 'loadingSpinner';
+        document.body.appendChild(loader);
+      }
+    }
 
-// Utility debounce function
-function debounce(func, wait) {
-  let timeout;
-  return function executedFunction(...args) {
-    const later = () => {
-      clearTimeout(timeout);
-      func(...args);
-    };
-    clearTimeout(timeout);
-    timeout = setTimeout(later, wait);
-  };
-}
-</script>
+    function hideLoading() {
+      const loader = document.getElementById('loadingSpinner');
+      if (loader) {
+        loader.remove();
+      }
+    }
+  </script>
 </body>
 </html>
