@@ -1,0 +1,5 @@
+{
+  "scripts": {
+    "dev": "prisma migrate dev --schema=prisma/schema.prisma"
+  }
+}
